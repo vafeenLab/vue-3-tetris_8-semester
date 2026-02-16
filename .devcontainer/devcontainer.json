@@ -1,0 +1,21 @@
+{
+	"name": "Vue with Ubuntu",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"dbaeumer.vscode-eslint",
+				"Vue.volar"
+			]
+		}
+	},
+	"shutdownAction": "stopContainer",
+	"forwardPorts": [
+		8000,
+		8080,
+		5173
+	],
+	"remoteUser": "node"
+}
