@@ -1,10 +1,15 @@
 <template>
-  Index
-
   <div>
-    <RouterLink :to="{ name: $routes.EXAMPLE }">
-     To Example
-    </RouterLink>
+    Index
+
+    <div>
+      <RouterLink :to="{ name: $routes.EXAMPLE }">
+        To Example
+      </RouterLink>
+      <RouterLink :to="{ name: $routes.DEMO }">
+        To Demo
+      </RouterLink>
+    </div>
   </div>
 </template>
 
