@@ -5,24 +5,37 @@
     <div>
       <label for="inputField">Введите текст:</label>
       <input 
-        id="inputField"
-        v-model="inputText" 
-        type="text" 
-        placeholder="Напишите что-нибудь..."
-        class="demo-input"
-      >
+          id="inputField"
+          v-model="inputText"
+          type="text"
+          placeholder="Напишите что-нибудь..."
+          class="demo-input"
+          @keyup.enter="printText">
     </div>
 
     <div class="input-group">
       <label for="outputField">Вывод:</label>
-      <textarea 
+      <textarea
         id="outputField"
-        v-model="inputText" 
+        v-model="outputText"
         readonly
         placeholder="Здесь появится ваш текст..."
         class="demo-textarea"
         rows="1"
-      ></textarea>
+        ></textarea>
+    </div>
+
+    <button @click="printText" class="demo-button" :disabled="!inputText.trim()">
+      Показать текст
+    </button>
+
+    <div class="navigation">
+      <RouterLink :to="{ name: $routes.INDEX }" class="nav-link">
+        На главную
+      </RouterLink>
+      <RouterLink :to="{ name: $routes.EXAMPLE }" class="nav-link">
+        На Example
+      </RouterLink>
     </div>
   </div>
 </template>
@@ -31,6 +44,13 @@
 import { ref } from 'vue'
 
 const inputText = ref('')
+const outputText = ref('')
+
+const printText = () => {
+  if (inputText.value.trim()) {
+    outputText.value = inputText.value
+  }
+}
 </script>
 
 <style scoped>
