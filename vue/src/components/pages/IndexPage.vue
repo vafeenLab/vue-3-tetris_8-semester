@@ -9,6 +9,9 @@
       <RouterLink :to="{ name: $routes.DEMO }">
         To Demo
       </RouterLink>
+      <RouterLink :to="{ name: $routes.TETRIS }">
+        To Tetris
+      </RouterLink>
     </div>
   </div>
 </template>
