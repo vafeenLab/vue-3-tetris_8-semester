@@ -1,40 +1,35 @@
 <template>
   <div>
-    <h1>Демо страница</h1>
+    <h1>{{ TEXTS.TITLE }}</h1>
 
     <div>
-      <label for="inputField">Введите текст:</label>
-      <input 
-          id="inputField"
-          v-model="inputText"
-          type="text"
-          placeholder="Напишите что-нибудь..."
-          class="demo-input"
-          @keyup.enter="printText">
+      <label for="inputField">{{ TEXTS.INPUT_LABEL }}</label>
+      <input id="inputField" v-model="inputText" type="text" :placeholder="TEXTS.INPUT_PLACEHOLDER"
+        class="demo-input" @keyup.enter="() => actions.printText()">
     </div>
 
     <div class="input-group">
-      <label for="outputField">Вывод:</label>
+      <label for="outputField">{{ TEXTS.OUTPUT_LABEL }}</label>
       <textarea
         id="outputField"
         v-model="outputText"
         readonly
-        placeholder="Здесь появится ваш текст..."
+        :placeholder="TEXTS.OUTPUT_PLACEHOLDER"
         class="demo-textarea"
         rows="1"
         ></textarea>
     </div>
 
-    <button @click="printText" class="demo-button" :disabled="!inputText.trim()">
-      Показать текст
+    <button @click="() => actions.printText()" class="demo-button" :disabled="!inputText.trim()">
+      {{ TEXTS.BUTTON_TEXT }}
     </button>
 
     <div class="navigation">
       <RouterLink :to="{ name: $routes.INDEX }" class="nav-link">
-        На главную
+        {{ TEXTS.HOME_LINK }}
       </RouterLink>
       <RouterLink :to="{ name: $routes.EXAMPLE }" class="nav-link">
-        На Example
+        {{ TEXTS.EXAMPLE_LINK }}
       </RouterLink>
     </div>
   </div>
@@ -45,79 +40,92 @@ import { ref } from 'vue'
 
 const inputText = ref('')
 const outputText = ref('')
+const TEXTS = {
+  TITLE: 'Демо страница',
+  INPUT_LABEL: 'Введите текст:',
+  INPUT_PLACEHOLDER: 'Напишите что-нибудь...',
+  OUTPUT_LABEL: 'Вывод:',
+  OUTPUT_PLACEHOLDER: 'Здесь появится ваш текст...',
+  BUTTON_TEXT: 'Показать текст',
+  HOME_LINK: 'На главную',
+  EXAMPLE_LINK: 'На Example',
+} as const
 
-const printText = () => {
-  if (inputText.value.trim()) {
-    outputText.value = inputText.value
+
+const actions = {
+  printText: () => {
+    if (inputText.value.trim()) {
+      outputText.value = inputText.value
+    }
   }
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .demo-container {
   max-width: 500px;
-  margin: 2rem auto;
-  padding: 0 1rem;
+  margin: 20px auto;
+  padding: 0 10px;
 }
 
 h1 {
   color: #000000;
   text-align: center;
-  margin-bottom: 2rem;
-  font-size: 1.8rem;
+  margin-bottom: 20px;
+  font-size: 18px;
   font-weight: 500;
 }
 
 .input-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 15px;
 }
 
 label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 5px;
   color: #000000;
-  font-size: 0.9rem;
+  font-size: 14px;
 }
 
 .demo-input {
   width: 100%;
-  padding: 0.6rem;
+  padding: 6px;
   border: 1px solid #000000;
   border-radius: 4px;
-  font-size: 1rem;
+  font-size: 14px;
   box-sizing: border-box;
   color: #000000;
   background-color: #ffffff;
-}
 
-.demo-input:focus {
-  outline: none;
-  border-color: #000000;
-}
+  &:focus {
+    outline: none;
+    border-color: #000000;
+  }
 
-.demo-input::placeholder {
-  color: #666666;
+  &::placeholder {
+    color: #666666;
+  }
 }
 
 .demo-textarea {
   width: 100%;
-  padding: 0.6rem;
+  padding: 10px;
   border: 1px solid #000000;
   border-radius: 4px;
-  font-size: 1rem;
+  font-size: 16px;
   background-color: #f5f5f5;
   resize: vertical;
   font-family: inherit;
   box-sizing: border-box;
   color: #000000;
-}
 
-.demo-textarea:focus {
-  outline: none;
-  border-color: #000000;
-}
+  &:focus {
+    outline: none;
+    border-color: #000000;
+  }
 
-.demo-textarea::placeholder {
-  color: #666666;
+  &::placeholder {
+    color: #666666;
+  }
 }
 </style>
