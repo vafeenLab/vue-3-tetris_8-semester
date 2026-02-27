@@ -6,8 +6,8 @@
       <div class="board">
         <div v-for="(row, y) in displayBoard" :key="y" class="board-row">
           <div v-for="(cell, x) in row" :key="x" class="board-cell" :class="{
-            filled: cell > 0,
-            ghost: cell === GHOST_VALUE,
+            'filled': cell > 0,
+            'ghost': cell === GHOST_VALUE
           }" :style="cell > 0 ? getCellColor(cell) : {}"></div>
         </div>
       </div>
@@ -17,7 +17,7 @@
           <h3>{{ TEXTS.NEXT_PIECE }}</h3>
           <div class="next-board">
             <div v-for="(row, y) in nextPieceBoard" :key="y" class="board-row">
-              <div v-for="(cell, x) in row" :key="x" class="board-cell small" :class="{ filled: cell > 0 }"
+              <div v-for="(cell, x) in row" :key="x" class="board-cell small" :class="{ 'filled': cell > 0 }"
                 :style="cell > 0 ? getCellColor(cell) : {}"></div>
             </div>
           </div>
@@ -37,32 +37,18 @@
 
         <div class="controls">
           <div class="control-row">
-            <button @click="() => actions.movePieceLeft()" :disabled="gameStatus !== GAME_STATUS.PLAYING"
-              class="control-btn">
-              {{ CONTROLS.LEFT }}
-            </button>
-            <button @click="() => actions.movePieceRight()" :disabled="gameStatus !== GAME_STATUS.PLAYING"
-              class="control-btn">
-              {{ CONTROLS.RIGHT }}
-            </button>
+            <button @click="moveLeft" :disabled="gameStatus !== GAME_STATUS.PLAYING" class="control-btn">{{ CONTROLS.LEFT }}</button>
+            <button @click="moveRight" :disabled="gameStatus !== GAME_STATUS.PLAYING" class="control-btn">{{ CONTROLS.RIGHT }}</button>
           </div>
           <div class="control-row">
-            <button @click="() => actions.rotateCurrentPiece()" :disabled="gameStatus !== GAME_STATUS.PLAYING"
-              class="control-btn">
-              {{ CONTROLS.ROTATE }}
-            </button>
-            <button @click="() => actions.hardDropPiece()" :disabled="gameStatus !== GAME_STATUS.PLAYING"
-              class="control-btn">
-              {{ CONTROLS.DROP }}
-            </button>
+            <button @click="rotatePiece" :disabled="gameStatus !== GAME_STATUS.PLAYING" class="control-btn">{{ CONTROLS.ROTATE }}</button>
+            <button @click="hardDrop" :disabled="gameStatus !== GAME_STATUS.PLAYING" class="control-btn">{{ CONTROLS.DROP }}</button>
           </div>
           <div class="control-row">
-            <button @click="() => actions.toggleGamePause()" class="control-btn pause-btn">
+            <button @click="togglePause" class="control-btn pause-btn">
               {{ gameStatus === GAME_STATUS.PLAYING ? CONTROLS.PAUSE : CONTROLS.PLAY }}
             </button>
-            <button @click="() => actions.resetGame()" class="control-btn reset-btn">
-              {{ CONTROLS.RESET }}
-            </button>
+            <button @click="resetGame" class="control-btn reset-btn">{{ CONTROLS.RESET }}</button>
           </div>
         </div>
       </div>
@@ -97,8 +83,9 @@ const MAX_SATURATION = 30
 const MIN_LIGHTNESS = 50
 const MAX_LIGHTNESS = 20
 const MAX_COLOR_ID = 1000000
-const GHOST_BACKGROUND = 'rgba(255, 255, 255, 0.2)'
+const GHOST_OPACITY = '0.2'
 const ERROR_COLOR = '#ff4444'
+const GHOST_BACKGROUND = 'rgba(255, 255, 255, 0.2)'
 
 const TEXTS = {
   TITLE: 'Тетрис',
@@ -110,14 +97,14 @@ const TEXTS = {
   PLAYING: 'Игра идет',
   HOME: 'На главную',
   EXAMPLE: 'На Example',
-  DEMO: 'На Demo',
+  DEMO: 'На Demo'
 } as const
 
 const GAME_STATUS = {
   IDLE: 'idle',
   PLAYING: 'playing',
   PAUSED: 'paused',
-  GAME_OVER: 'gameOver',
+  GAME_OVER: 'gameOver'
 } as const
 
 const CONTROLS = {
@@ -127,7 +114,7 @@ const CONTROLS = {
   DROP: '↓',
   PAUSE: '⏸',
   PLAY: '▶',
-  RESET: '↺',
+  RESET: '↺'
 } as const
 
 const PIECE_SHAPES = [
@@ -147,283 +134,33 @@ const PIECE_SHAPES = [
   [[0, 0, 1], [1, 1, 1]]
 ] as const
 
-interface Cell {
-  value: number
-  color: string | null
-  colorId: number | null
-}
-
-interface Piece {
-  shape: number[][]
-  color: string
-  colorId: number
-}
-
-const board = ref<Cell[][]>([])
-const currentPiece = ref<Piece | null>(null)
-const nextPiece = ref<Piece | null>(null)
-const currentX = ref(0)
-const currentY = ref(0)
-const linesCleared = ref(0)
-const gameStatus = ref<string>(GAME_STATUS.IDLE)
-let gameInterval: ReturnType<typeof setInterval> | null = null
-
-const generateRandomColor = (): string => {
+const generateRandomColor = () => {
   const hue = Math.floor(Math.random() * (MAX_HUE - MIN_HUE) + MIN_HUE)
   const saturation = MIN_SATURATION + Math.floor(Math.random() * MAX_SATURATION)
   const lightness = MIN_LIGHTNESS + Math.floor(Math.random() * MAX_LIGHTNESS)
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`
 }
 
-const createPiece = (shape: number[][]): Piece => ({
-  shape: shape.map((row) => [...row]),
-  color: generateRandomColor(),
-  colorId: Math.floor(Math.random() * MAX_COLOR_ID),
-})
-
-const getRandomPiece = (): Piece => {
-  const randomIndex = Math.floor(Math.random() * PIECE_SHAPES.length)
-  return createPiece(PIECE_SHAPES[randomIndex] as number[][])
-}
-
-const collision = (shape: number[][], offsetX: number, offsetY: number): boolean => {
-  for (let y = 0; y < shape.length; y++) {
-    for (let x = 0; x < shape[y].length; x++) {
-      if (shape[y][x] !== 0) {
-        const boardX = offsetX + x
-        const boardY = offsetY + y
-
-        if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) {
-          return true
-        }
-
-        if (boardY >= 0 && board.value[boardY]?.[boardX]?.value !== 0) {
-          return true
-        }
-      }
-    }
+const createPiece = (shape: number[][]) => {
+  return {
+    shape: shape,
+    color: generateRandomColor(),
+    colorId: Math.floor(Math.random() * MAX_COLOR_ID)
   }
-  return false
 }
 
-const actions = {
-  initBoard: () => {
-    board.value = Array(BOARD_HEIGHT)
-      .fill(0)
-      .map(() =>
-        Array(BOARD_WIDTH)
-          .fill(0)
-          .map(
-            (): Cell => ({
-              value: 0,
-              color: null,
-              colorId: null,
-            })
-          )
-      )
-  },
-
-  setNextPiece: (piece: Piece | null) => {
-    nextPiece.value = piece
-  },
-
-  setCurrentPiece: (piece: Piece | null) => {
-    currentPiece.value = piece
-  },
-
-  setCurrentPosition: (x: number, y: number) => {
-    currentX.value = x
-    currentY.value = y
-  },
-
-  setGameStatus: (status: string) => {
-    gameStatus.value = status
-  },
-
-  addLines: (lines: number) => {
-    linesCleared.value += lines
-  },
-
-  resetLines: () => {
-    linesCleared.value = 0
-  },
-
-  mergePieceToBoard: () => {
-    if (!currentPiece.value) return
-
-    for (let y = 0; y < currentPiece.value.shape.length; y++) {
-      for (let x = 0; x < currentPiece.value.shape[y].length; x++) {
-        if (currentPiece.value.shape[y][x] !== 0) {
-          const boardY = currentY.value + y
-          const boardX = currentX.value + x
-
-          if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
-            if (board.value[boardY][boardX].value === 0) {
-              board.value[boardY][boardX] = {
-                value: currentPiece.value.colorId,
-                color: currentPiece.value.color,
-                colorId: currentPiece.value.colorId,
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-
-  removeFullLines: () => {
-    let linesRemoved = 0
-
-    for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
-      if (board.value[y].every((cell) => cell.value !== 0)) {
-        board.value.splice(y, 1)
-        board.value.unshift(
-          Array(BOARD_WIDTH)
-            .fill(0)
-            .map(
-              (): Cell => ({
-                value: 0,
-                color: null,
-                colorId: null,
-              })
-            )
-        )
-        y++
-        linesRemoved++
-      }
-    }
-
-    if (linesRemoved > 0) {
-      actions.addLines(linesRemoved)
-    }
-  },
-
-  spawnNewPiece: () => {
-    if (!nextPiece.value) {
-      actions.setNextPiece(getRandomPiece())
-    }
-
-    actions.setCurrentPiece(JSON.parse(JSON.stringify(nextPiece.value)))
-    actions.setNextPiece(getRandomPiece())
-
-    const newX = Math.floor((BOARD_WIDTH - (currentPiece.value?.shape[0].length || 0)) / 2)
-    actions.setCurrentPosition(newX, 0)
-
-    if (currentPiece.value && collision(currentPiece.value.shape, currentX.value, currentY.value)) {
-      actions.setGameStatus(GAME_STATUS.GAME_OVER)
-      if (gameInterval) {
-        clearInterval(gameInterval)
-        gameInterval = null
-      }
-    }
-  },
-
-  initGame: () => {
-    actions.initBoard()
-    actions.setNextPiece(getRandomPiece())
-    actions.spawnNewPiece()
-    actions.resetLines()
-    actions.setGameStatus(GAME_STATUS.IDLE)
-  },
-
-  movePieceLeft: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
-
-    if (!collision(currentPiece.value.shape, currentX.value - 1, currentY.value)) {
-      actions.setCurrentPosition(currentX.value - 1, currentY.value)
-    }
-  },
-
-  movePieceRight: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
-
-    if (!collision(currentPiece.value.shape, currentX.value + 1, currentY.value)) {
-      actions.setCurrentPosition(currentX.value + 1, currentY.value)
-    }
-  },
-
-  rotateCurrentPiece: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
-
-    const rotated = currentPiece.value.shape[0].map((_, index) =>
-      currentPiece.value!.shape.map((row) => row[index]).reverse()
-    )
-
-    if (!collision(rotated, currentX.value, currentY.value)) {
-      actions.setCurrentPiece({
-        ...currentPiece.value,
-        shape: rotated,
-      })
-    } else {
-      if (!collision(rotated, currentX.value - 1, currentY.value)) {
-        actions.setCurrentPiece({
-          ...currentPiece.value,
-          shape: rotated,
-        })
-        actions.setCurrentPosition(currentX.value - 1, currentY.value)
-      } else if (!collision(rotated, currentX.value + 1, currentY.value)) {
-        actions.setCurrentPiece({
-          ...currentPiece.value,
-          shape: rotated,
-        })
-        actions.setCurrentPosition(currentX.value + 1, currentY.value)
-      }
-    }
-  },
-
-  movePieceDown: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
-
-    if (!collision(currentPiece.value.shape, currentX.value, currentY.value + 1)) {
-      actions.setCurrentPosition(currentX.value, currentY.value + 1)
-    } else {
-      actions.mergePieceToBoard()
-      actions.removeFullLines()
-      actions.spawnNewPiece()
-    }
-  },
-
-  hardDropPiece: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
-
-    let y = currentY.value
-    while (!collision(currentPiece.value.shape, currentX.value, y + 1)) {
-      y++
-    }
-    actions.setCurrentPosition(currentX.value, y)
-    actions.mergePieceToBoard()
-    actions.removeFullLines()
-    actions.spawnNewPiece()
-  },
-
-  toggleGamePause: () => {
-    if (gameStatus.value === GAME_STATUS.PLAYING) {
-      actions.setGameStatus(GAME_STATUS.PAUSED)
-      if (gameInterval) {
-        clearInterval(gameInterval)
-        gameInterval = null
-      }
-    } else if (gameStatus.value === GAME_STATUS.PAUSED) {
-      actions.setGameStatus(GAME_STATUS.PLAYING)
-      startGameLoop()
-    } else if (gameStatus.value === GAME_STATUS.IDLE) {
-      actions.setGameStatus(GAME_STATUS.PLAYING)
-      startGameLoop()
-    } else if (gameStatus.value === GAME_STATUS.GAME_OVER) {
-      actions.initGame()
-      actions.setGameStatus(GAME_STATUS.PLAYING)
-      startGameLoop()
-    }
-  },
-
-  resetGame: () => {
-    if (gameInterval) {
-      clearInterval(gameInterval)
-      gameInterval = null
-    }
-    actions.initGame()
-  },
-}
+const board = ref(Array(BOARD_HEIGHT).fill(0).map(() => Array(BOARD_WIDTH).fill(0).map(() => ({
+  value: 0,
+  color: null as string | null,
+  colorId: null as number | null
+}))))
+const currentPiece = ref<ReturnType<typeof createPiece> | null>(null)
+const nextPiece = ref<ReturnType<typeof createPiece> | null>(null)
+const currentX = ref(0)
+const currentY = ref(0)
+const linesCleared = ref(0)
+const gameStatus = ref<string>(GAME_STATUS.IDLE)
+let gameInterval: ReturnType<typeof setInterval> | null = null
 
 const ghostY = computed(() => {
   if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return currentY.value
@@ -470,28 +207,6 @@ const displayBoard = computed(() => {
   return display
 })
 
-const nextPieceBoard = computed(() => {
-  if (!nextPiece.value) {
-    return Array(NEXT_PIECE_SIZE)
-      .fill(0)
-      .map(() => Array(NEXT_PIECE_SIZE).fill(0))
-  }
-
-  const result = Array(NEXT_PIECE_SIZE)
-    .fill(0)
-    .map(() => Array(NEXT_PIECE_SIZE).fill(0))
-
-  for (let y = 0; y < nextPiece.value.shape.length; y++) {
-    for (let x = 0; x < nextPiece.value.shape[y].length; x++) {
-      if (nextPiece.value.shape[y][x] > 0) {
-        result[y][x] = nextPiece.value.colorId
-      }
-    }
-  }
-
-  return result
-})
-
 const getCellColor = (colorId: number) => {
   if (colorId === GHOST_VALUE) return { backgroundColor: GHOST_BACKGROUND }
 
@@ -503,15 +218,232 @@ const getCellColor = (colorId: number) => {
     }
   }
 
-  if (currentPiece.value?.colorId === colorId) {
+  if (currentPiece.value && currentPiece.value.colorId === colorId) {
     return { backgroundColor: currentPiece.value.color }
   }
 
-  if (nextPiece.value?.colorId === colorId) {
+  if (nextPiece.value && nextPiece.value.colorId === colorId) {
     return { backgroundColor: nextPiece.value.color }
   }
 
   return { backgroundColor: ERROR_COLOR }
+}
+
+const nextPieceBoard = computed(() => {
+  if (!nextPiece.value) return Array(NEXT_PIECE_SIZE).fill(0).map(() => Array(NEXT_PIECE_SIZE).fill(0))
+
+  const board = Array(NEXT_PIECE_SIZE).fill(0).map(() => Array(NEXT_PIECE_SIZE).fill(0))
+  const piece = nextPiece.value
+
+  for (let y = 0; y < piece.shape.length; y++) {
+    for (let x = 0; x < piece.shape[y].length; x++) {
+      if (piece.shape[y][x] > 0) {
+        board[y][x] = piece.colorId
+      }
+    }
+  }
+
+  return board
+})
+
+const getRandomPiece = () => {
+  const randomIndex = Math.floor(Math.random() * PIECE_SHAPES.length)
+  return createPiece(PIECE_SHAPES[randomIndex])
+}
+
+const initGame = () => {
+  board.value = Array(BOARD_HEIGHT).fill(0).map(() => Array(BOARD_WIDTH).fill(0).map(() => ({
+    value: 0,
+    color: null,
+    colorId: null
+  })))
+  nextPiece.value = getRandomPiece()
+  spawnNewPiece()
+  linesCleared.value = 0
+  gameStatus.value = GAME_STATUS.IDLE
+}
+
+const spawnNewPiece = () => {
+  if (!nextPiece.value) {
+    nextPiece.value = getRandomPiece()
+  }
+
+  currentPiece.value = JSON.parse(JSON.stringify(nextPiece.value))
+  nextPiece.value = getRandomPiece()
+
+  currentX.value = Math.floor((BOARD_WIDTH - currentPiece.value.shape[0].length) / 2)
+  currentY.value = 0
+
+  if (collision(currentPiece.value.shape, currentX.value, currentY.value)) {
+    gameStatus.value = GAME_STATUS.GAME_OVER
+    if (gameInterval) {
+      clearInterval(gameInterval)
+      gameInterval = null
+    }
+  }
+}
+
+const collision = (shape: number[][], offsetX: number, offsetY: number) => {
+  for (let y = 0; y < shape.length; y++) {
+    for (let x = 0; x < shape[y].length; x++) {
+      if (shape[y][x] !== 0) {
+        const boardX = offsetX + x
+        const boardY = offsetY + y
+
+        if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) {
+          return true
+        }
+
+        if (boardY >= 0 && board.value[boardY] && board.value[boardY][boardX].value !== 0) {
+          return true
+        }
+      }
+    }
+  }
+  return false
+}
+
+const mergePiece = () => {
+  if (!currentPiece.value) return
+
+  for (let y = 0; y < currentPiece.value.shape.length; y++) {
+    for (let x = 0; x < currentPiece.value.shape[y].length; x++) {
+      if (currentPiece.value.shape[y][x] !== 0) {
+        const boardY = currentY.value + y
+        const boardX = currentX.value + x
+
+        if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+          if (board.value[boardY][boardX].value === 0) {
+            board.value[boardY][boardX] = {
+              value: currentPiece.value.colorId,
+              color: currentPiece.value.color,
+              colorId: currentPiece.value.colorId
+            }
+          }
+        }
+      }
+    }
+  }
+
+  checkLines()
+  spawnNewPiece()
+}
+
+const checkLines = () => {
+  let linesRemoved = 0
+
+  for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
+    if (board.value[y].every(cell => cell.value !== 0)) {
+      board.value.splice(y, 1)
+      board.value.unshift(Array(BOARD_WIDTH).fill(0).map(() => ({
+        value: 0,
+        color: null,
+        colorId: null
+      })))
+      y++
+      linesRemoved++
+    }
+  }
+
+  if (linesRemoved > 0) {
+    linesCleared.value += linesRemoved
+  }
+}
+
+const moveLeft = () => {
+  if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
+
+  if (!collision(currentPiece.value.shape, currentX.value - 1, currentY.value)) {
+    currentX.value--
+  }
+}
+
+const moveRight = () => {
+  if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
+
+  if (!collision(currentPiece.value.shape, currentX.value + 1, currentY.value)) {
+    currentX.value++
+  }
+}
+
+const rotatePiece = () => {
+  if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
+
+  const rotated = currentPiece.value.shape[0].map((_, index) =>
+    currentPiece.value.shape.map(row => row[index]).reverse()
+  )
+
+  if (!collision(rotated, currentX.value, currentY.value)) {
+    currentPiece.value = {
+      ...currentPiece.value,
+      shape: rotated
+    }
+  } else {
+    if (!collision(rotated, currentX.value - 1, currentY.value)) {
+      currentPiece.value = {
+        ...currentPiece.value,
+        shape: rotated
+      }
+      currentX.value--
+    }
+    else if (!collision(rotated, currentX.value + 1, currentY.value)) {
+      currentPiece.value = {
+        ...currentPiece.value,
+        shape: rotated
+      }
+      currentX.value++
+    }
+  }
+}
+
+const hardDrop = () => {
+  if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
+
+  while (!collision(currentPiece.value.shape, currentX.value, currentY.value + 1)) {
+    currentY.value++
+  }
+
+  mergePiece()
+}
+
+const moveDown = () => {
+  if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
+
+  if (!collision(currentPiece.value.shape, currentX.value, currentY.value + 1)) {
+    currentY.value++
+  } else {
+    mergePiece()
+  }
+}
+
+const togglePause = () => {
+  if (gameStatus.value === GAME_STATUS.PLAYING) {
+    gameStatus.value = GAME_STATUS.PAUSED
+    if (gameInterval) {
+      clearInterval(gameInterval)
+      gameInterval = null
+    }
+  } else if (gameStatus.value === GAME_STATUS.PAUSED) {
+    gameStatus.value = GAME_STATUS.PLAYING
+    startGameLoop()
+  } else if (gameStatus.value === GAME_STATUS.IDLE) {
+    startGame()
+  } else if (gameStatus.value === GAME_STATUS.GAME_OVER) {
+    resetGame()
+  }
+}
+
+const startGame = () => {
+  gameStatus.value = GAME_STATUS.PLAYING
+  startGameLoop()
+}
+
+const resetGame = () => {
+  if (gameInterval) {
+    clearInterval(gameInterval)
+    gameInterval = null
+  }
+  initGame()
 }
 
 const startGameLoop = () => {
@@ -521,13 +453,13 @@ const startGameLoop = () => {
 
   gameInterval = setInterval(() => {
     if (gameStatus.value === GAME_STATUS.PLAYING) {
-      actions.movePieceDown()
+      moveDown()
     }
   }, BASE_SPEED)
 }
 
 onMounted(() => {
-  actions.initGame()
+  initGame()
 })
 
 onUnmounted(() => {
