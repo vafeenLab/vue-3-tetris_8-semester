@@ -51,10 +51,12 @@ defineProps<{
   padding: 10px;
   border-radius: 8px;
   margin-top: 10px;
+  display: inline-block;
 }
 
 .board-row {
   display: flex;
+  justify-content: center;
 }
 
 .board-cell {
