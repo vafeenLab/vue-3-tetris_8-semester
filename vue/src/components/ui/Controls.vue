@@ -2,14 +2,14 @@
   <div class="controls">
     <div class="control-row">
       <button
-        @click="actions.movePieceLeft()"
+        @click="() => actions.movePieceLeft()"
         :disabled="gameStatus !== GAME_STATUS.PLAYING"
         class="control-btn"
       >
         {{ CONTROLS.LEFT }}
       </button>
       <button
-        @click="actions.movePieceRight()"
+        @click="() => actions.movePieceRight()"
         :disabled="gameStatus !== GAME_STATUS.PLAYING"
         class="control-btn"
       >
@@ -18,14 +18,14 @@
     </div>
     <div class="control-row">
       <button
-        @click="actions.rotateCurrentPiece()"
+        @click="() => actions.rotateCurrentPiece()"
         :disabled="gameStatus !== GAME_STATUS.PLAYING"
         class="control-btn"
       >
         {{ CONTROLS.ROTATE }}
       </button>
       <button
-        @click="actions.hardDropPiece()"
+        @click="() => actions.hardDropPiece()"
         :disabled="gameStatus !== GAME_STATUS.PLAYING"
         class="control-btn"
       >
@@ -33,10 +33,10 @@
       </button>
     </div>
     <div class="control-row">
-      <button @click="actions.toggleGamePause()" class="control-btn pause-btn">
+      <button @click="() => actions.toggleGamePause()" class="control-btn pause-btn">
         {{ gameStatus === GAME_STATUS.PLAYING ? CONTROLS.PAUSE : CONTROLS.PLAY }}
       </button>
-      <button @click="actions.resetGame()" class="control-btn reset-btn">
+      <button @click="() => actions.resetGame()" class="control-btn reset-btn">
         {{ CONTROLS.RESET }}
       </button>
     </div>
