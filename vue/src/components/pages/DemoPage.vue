@@ -4,13 +4,13 @@
 
     <div>
       <label for="inputField">{{ TEXTS.INPUT_LABEL }}</label>
-      <input
-        id="inputField"
-        v-model="inputText"
-        type="text" 
-        :placeholder="TEXTS.INPUT_PLACEHOLDER"
-        class="demo-input" 
-        @keyup.enter="() => actions.printText()">
+      <input 
+          id="inputField"
+          v-model="inputText"
+          type="text" 
+          :placeholder="TEXTS.INPUT_PLACEHOLDER"
+          class="demo-input" 
+          @keyup.enter="() => actions.printText()">
     </div>
 
     <div class="input-group">
