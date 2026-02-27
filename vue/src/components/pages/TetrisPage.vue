@@ -8,144 +8,64 @@
           <div v-for="(cell, x) in row" :key="x" class="board-cell" :class="{
             filled: cell > 0,
             ghost: cell === GHOST_VALUE,
-          }" :style="cell > 0 ? getCellColor(cell) : {}"></div>
+          }" :style="cell > 0 ? getCellColor(cell) : {}">
+          </div>
         </div>
       </div>
 
       <div class="info-panel">
-        <div class="next-piece">
-          <h3>{{ TEXTS.NEXT_PIECE }}</h3>
-          <div class="next-board">
-            <div v-for="(row, y) in nextPieceBoard" :key="y" class="board-row">
-              <div v-for="(cell, x) in row" :key="x" class="board-cell small" :class="{ filled: cell > 0 }"
-                :style="cell > 0 ? getCellColor(cell) : {}"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="lines">
-          <h3>{{ TEXTS.LINES }}</h3>
-          <div class="lines-value">{{ linesCleared }}</div>
-        </div>
-
-        <div class="game-status">
-          <h3 v-if="gameStatus === GAME_STATUS.GAME_OVER">{{ TEXTS.GAME_OVER }}</h3>
-          <h3 v-else-if="gameStatus === GAME_STATUS.PAUSED">{{ TEXTS.PAUSED }}</h3>
-          <h3 v-else-if="gameStatus === GAME_STATUS.IDLE">{{ TEXTS.IDLE }}</h3>
-          <h3 v-else>{{ TEXTS.PLAYING }}</h3>
-        </div>
-
-        <div class="controls">
-          <div class="control-row">
-            <button @click="() => actions.movePieceLeft()" :disabled="gameStatus !== GAME_STATUS.PLAYING"
-              class="control-btn">
-              {{ CONTROLS.LEFT }}
-            </button>
-            <button @click="() => actions.movePieceRight()" :disabled="gameStatus !== GAME_STATUS.PLAYING"
-              class="control-btn">
-              {{ CONTROLS.RIGHT }}
-            </button>
-          </div>
-          <div class="control-row">
-            <button @click="() => actions.rotateCurrentPiece()" :disabled="gameStatus !== GAME_STATUS.PLAYING"
-              class="control-btn">
-              {{ CONTROLS.ROTATE }}
-            </button>
-            <button @click="() => actions.hardDropPiece()" :disabled="gameStatus !== GAME_STATUS.PLAYING"
-              class="control-btn">
-              {{ CONTROLS.DROP }}
-            </button>
-          </div>
-          <div class="control-row">
-            <button @click="() => actions.toggleGamePause()" class="control-btn pause-btn">
-              {{ gameStatus === GAME_STATUS.PLAYING ? CONTROLS.PAUSE : CONTROLS.PLAY }}
-            </button>
-            <button @click="() => actions.resetGame()" class="control-btn reset-btn">
-              {{ CONTROLS.RESET }}
-            </button>
-          </div>
-        </div>
+        <InfoPanel
+          :next-piece-board="nextPieceBoard"
+          :lines-cleared="linesCleared"
+          :game-status="gameStatus"
+          :get-cell-color="getCellColor"
+        />
+        <Controls
+          :game-status="gameStatus"
+          :actions="actions"
+        />
       </div>
-    </div>
 
-    <div class="navigation">
-      <RouterLink :to="{ name: $routes.INDEX }" class="nav-link">
-        {{ TEXTS.HOME }}
-      </RouterLink>
-      <RouterLink :to="{ name: $routes.EXAMPLE }" class="nav-link">
-        {{ TEXTS.EXAMPLE }}
-      </RouterLink>
-      <RouterLink :to="{ name: $routes.DEMO }" class="nav-link">
-        {{ TEXTS.DEMO }}
-      </RouterLink>
+      <div class="navigation">
+        <RouterLink :to="{ name: $routes.INDEX }" class="nav-link">
+          {{ TEXTS.HOME }}
+        </RouterLink>
+        <RouterLink :to="{ name: $routes.EXAMPLE }" class="nav-link">
+          {{ TEXTS.EXAMPLE }}
+        </RouterLink>
+        <RouterLink :to="{ name: $routes.DEMO }" class="nav-link">
+         {{ TEXTS.DEMO }}
+        </RouterLink>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import InfoPanel from '../ui/InfoPanel.vue'
+import Controls from '../ui/Controls.vue'
 
-const BOARD_WIDTH = 10
-const BOARD_HEIGHT = 20
-const BASE_SPEED = 500
-const GHOST_VALUE = -1
-const NEXT_PIECE_SIZE = 4
-const MIN_HUE = 0
-const MAX_HUE = 360
-const MIN_SATURATION = 70
-const MAX_SATURATION = 30
-const MIN_LIGHTNESS = 50
-const MAX_LIGHTNESS = 20
-const MAX_COLOR_ID = 1000000
-const GHOST_BACKGROUND = 'rgba(255, 255, 255, 0.2)'
-const ERROR_COLOR = '#ff4444'
-
-const TEXTS = {
-  TITLE: 'Тетрис',
-  NEXT_PIECE: 'Следующая:',
-  LINES: 'Линии:',
-  GAME_OVER: 'Игра окончена!',
-  PAUSED: 'Пауза',
-  IDLE: 'Игра не началась',
-  PLAYING: 'Игра идет',
-  HOME: 'На главную',
-  EXAMPLE: 'На Example',
-  DEMO: 'На Demo',
-} as const
-
-const GAME_STATUS = {
-  IDLE: 'idle',
-  PLAYING: 'playing',
-  PAUSED: 'paused',
-  GAME_OVER: 'gameOver',
-} as const
-
-const CONTROLS = {
-  LEFT: '←',
-  RIGHT: '→',
-  ROTATE: '↻',
-  DROP: '↓',
-  PAUSE: '⏸',
-  PLAY: '▶',
-  RESET: '↺',
-} as const
-
-const PIECE_SHAPES = [
-  // I
-  [[1, 1, 1, 1]],
-  // O
-  [[1, 1], [1, 1]],
-  // T
-  [[0, 1, 0], [1, 1, 1]],
-  // S
-  [[0, 1, 1], [1, 1, 0]],
-  // Z
-  [[1, 1, 0], [0, 1, 1]],
-  // L
-  [[1, 0, 0], [1, 1, 1]],
-  // J
-  [[0, 0, 1], [1, 1, 1]]
-] as const
+import {
+  BOARD_WIDTH,
+  BOARD_HEIGHT,
+  BASE_SPEED,
+  GHOST_VALUE,
+  NEXT_PIECE_SIZE,
+  MIN_HUE,
+  MAX_HUE,
+  MIN_SATURATION,
+  MAX_SATURATION,
+  MIN_LIGHTNESS,
+  MAX_LIGHTNESS,
+  MAX_COLOR_ID,
+  GHOST_BACKGROUND,
+  ERROR_COLOR,
+  TEXTS,
+  GAME_STATUS,
+  CONTROLS,
+  PIECE_SHAPES
+} from '../../constants/constants'
 
 interface Cell {
   value: number
@@ -537,7 +457,7 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .tetris-container {
   max-width: 800px;
   margin: 0 auto;
