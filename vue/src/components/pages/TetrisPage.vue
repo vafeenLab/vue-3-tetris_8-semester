@@ -1,19 +1,28 @@
 <template>
-  <div class="tetris-container">
-    <h1>{{ TEXTS.TITLE }}</h1>
+  <div class="tetris-page">
+    <h1 class="tetris-page__title">Тетрис</h1>
 
-    <div class="game-area">
-      <div class="board">
-        <div v-for="(row, y) in displayBoard" :key="y" class="board-row">
-          <div v-for="(cell, x) in row" :key="x" class="board-cell" :class="{
-            filled: cell > 0,
-            ghost: cell === GHOST_VALUE,
-          }" :style="cell > 0 ? getCellColor(cell) : {}">
-          </div>
+    <div class="tetris-page__game-area">
+      <div class="tetris-page__board">
+        <div
+          v-for="(row, y) in displayBoard"
+          :key="y"
+          class="tetris-page__board-row"
+        >
+          <div
+            v-for="(cell, x) in row"
+            :key="x"
+            class="tetris-page__board-cell"
+            :class="{
+              'tetris-page__board-cell_filled': cell > 0,
+              'tetris-page__board-cell_ghost': cell === GHOST_VALUE,
+            }"
+            :style="cell > 0 ? getCellColor(cell) : {}"
+          ></div>
         </div>
       </div>
 
-      <div class="info-panel">
+      <div class="tetris-page__info-panel">
         <InfoPanel
           :next-piece-board="nextPieceBoard"
           :lines-cleared="linesCleared"
@@ -25,18 +34,21 @@
           :actions="actions"
         />
       </div>
+    </div>
 
-      <div class="navigation">
-        <RouterLink :to="{ name: $routes.INDEX }" class="nav-link">
-          {{ TEXTS.HOME }}
-        </RouterLink>
-        <RouterLink :to="{ name: $routes.EXAMPLE }" class="nav-link">
-          {{ TEXTS.EXAMPLE }}
-        </RouterLink>
-        <RouterLink :to="{ name: $routes.DEMO }" class="nav-link">
-         {{ TEXTS.DEMO }}
-        </RouterLink>
-      </div>
+    <div class="tetris-page__navigation">
+      <RouterLink
+        :to="{ name: $routes.INDEX }"
+        class="tetris-page__nav-link"
+      >
+        To Index
+      </RouterLink>
+      <RouterLink
+        :to="{ name: $routes.EXAMPLE }"
+        class="tetris-page__nav-link"
+      >
+        To Example
+      </RouterLink>
     </div>
   </div>
 </template>
@@ -45,7 +57,6 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import InfoPanel from '../ui/InfoPanel.vue'
 import Controls from '../ui/Controls.vue'
-
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -61,7 +72,6 @@ import {
   MAX_COLOR_ID,
   GHOST_BACKGROUND,
   ERROR_COLOR,
-  TEXTS,
   GAME_STATUS,
   CONTROLS,
   PIECE_SHAPES
@@ -107,23 +117,22 @@ const getRandomPiece = (): Piece => {
 }
 
 const collision = (shape: number[][], offsetX: number, offsetY: number): boolean => {
-  for (let y = 0; y < shape.length; y++) {
-    for (let x = 0; x < shape[y].length; x++) {
-      if (shape[y][x] !== 0) {
-        const boardX = offsetX + x
-        const boardY = offsetY + y
-
-        if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) {
-          return true
-        }
-
-        if (boardY >= 0 && board.value[boardY]?.[boardX]?.value !== 0) {
-          return true
-        }
+  return shape.some((row, y) =>
+    row.some((cell, x) => {
+      if (cell === 0) {
+        return false
       }
-    }
-  }
-  return false
+      const boardX = offsetX + x
+      const boardY = offsetY + y
+      if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) { 
+        return true
+      }
+      if (boardY >= 0 && board.value[boardY]?.[boardX]?.value !== 0) {
+        return true
+      }
+      return false
+    })
+  )
 }
 
 const actions = {
@@ -169,50 +178,49 @@ const actions = {
   },
 
   mergePieceToBoard: () => {
-    if (!currentPiece.value) return
-
-    for (let y = 0; y < currentPiece.value.shape.length; y++) {
-      for (let x = 0; x < currentPiece.value.shape[y].length; x++) {
-        if (currentPiece.value.shape[y][x] !== 0) {
-          const boardY = currentY.value + y
-          const boardX = currentX.value + x
-
-          if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
-            if (board.value[boardY][boardX].value === 0) {
-              board.value[boardY][boardX] = {
-                value: currentPiece.value.colorId,
-                color: currentPiece.value.color,
-                colorId: currentPiece.value.colorId,
-              }
+    if (!currentPiece.value) {
+      return
+    }
+    const piece = currentPiece.value
+    const posX = currentX.value
+    const posY = currentY.value
+    piece.shape.forEach((row, y) => {
+      row.forEach((cell, x) => {
+        if (cell !== 0) {
+          const boardY = posY + y
+          const boardX = posX + x
+          if (boardY >= 0 
+          && boardY < BOARD_HEIGHT 
+          && boardX >= 0 
+          && boardX < BOARD_WIDTH 
+          && board.value[boardY][boardX].value === 0) {
+            board.value[boardY][boardX] = {
+              value: piece.colorId,
+              color: piece.color,
+              colorId: piece.colorId,
             }
           }
         }
-      }
-    }
+      })
+    })
   },
 
   removeFullLines: () => {
     let linesRemoved = 0
-
-    for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
-      if (board.value[y].every((cell) => cell.value !== 0)) {
+    let y = BOARD_HEIGHT - 1
+    while (y >= 0) {
+      if (board.value[y].every(cell => cell.value !== 0)) {
         board.value.splice(y, 1)
         board.value.unshift(
-          Array(BOARD_WIDTH)
-            .fill(0)
-            .map(
-              (): Cell => ({
-                value: 0,
-                color: null,
-                colorId: null,
-              })
-            )
+          Array(BOARD_WIDTH).fill(0).map(() => ({ 
+            value: 0, color: null, colorId: null 
+          }))
         )
-        y++
         linesRemoved++
+      } else {
+        y--
       }
     }
-
     if (linesRemoved > 0) {
       actions.addLines(linesRemoved)
     }
@@ -229,7 +237,8 @@ const actions = {
     const newX = Math.floor((BOARD_WIDTH - (currentPiece.value?.shape[0].length || 0)) / 2)
     actions.setCurrentPosition(newX, 0)
 
-    if (currentPiece.value && collision(currentPiece.value.shape, currentX.value, currentY.value)) {
+    if (currentPiece.value 
+    && collision(currentPiece.value.shape, currentX.value, currentY.value)) {
       actions.setGameStatus(GAME_STATUS.GAME_OVER)
       if (gameInterval) {
         clearInterval(gameInterval)
@@ -247,23 +256,27 @@ const actions = {
   },
 
   movePieceLeft: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
-
+    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) {
+      return
+    }
     if (!collision(currentPiece.value.shape, currentX.value - 1, currentY.value)) {
       actions.setCurrentPosition(currentX.value - 1, currentY.value)
     }
   },
 
   movePieceRight: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
-
+    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) {
+      return
+    }
     if (!collision(currentPiece.value.shape, currentX.value + 1, currentY.value)) {
       actions.setCurrentPosition(currentX.value + 1, currentY.value)
     }
   },
 
   rotateCurrentPiece: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
+    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) {
+      return
+    }
 
     const rotated = currentPiece.value.shape[0].map((_, index) =>
       currentPiece.value!.shape.map((row) => row[index]).reverse()
@@ -292,7 +305,9 @@ const actions = {
   },
 
   movePieceDown: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
+    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) {
+      return
+    }
 
     if (!collision(currentPiece.value.shape, currentX.value, currentY.value + 1)) {
       actions.setCurrentPosition(currentX.value, currentY.value + 1)
@@ -304,7 +319,9 @@ const actions = {
   },
 
   hardDropPiece: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return
+    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) {
+      return
+    }
 
     let y = currentY.value
     while (!collision(currentPiece.value.shape, currentX.value, y + 1)) {
@@ -346,7 +363,9 @@ const actions = {
 }
 
 const ghostY = computed(() => {
-  if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) return currentY.value
+  if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) {
+    return currentY.value
+  }
   let y = currentY.value
   while (!collision(currentPiece.value.shape, currentX.value, y + 1)) {
     y++
@@ -355,36 +374,39 @@ const ghostY = computed(() => {
 })
 
 const displayBoard = computed(() => {
-  const display = board.value.map(row =>
-    row.map(cell => cell.value > 0 ? cell.value : 0)
-  )
+  const display = board.value.map(row => row.map(cell => (cell.value > 0 ? cell.value : 0)))
 
   if (currentPiece.value && gameStatus.value === GAME_STATUS.PLAYING) {
-    for (let y = 0; y < currentPiece.value.shape.length; y++) {
-      for (let x = 0; x < currentPiece.value.shape[y].length; x++) {
-        if (currentPiece.value.shape[y][x] > 0) {
-          const boardY = ghostY.value + y
-          const boardX = currentX.value + x
+    const piece = currentPiece.value
+    const ghostYVal = ghostY.value
+    const curX = currentX.value
+    const curY = currentY.value
+
+    piece.shape.forEach((row, y) => {
+      row.forEach((cell, x) => {
+        if (cell > 0) {
+          const boardY = ghostYVal + y
+          const boardX = curX + x
           if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
             if (display[boardY][boardX] === 0) {
               display[boardY][boardX] = GHOST_VALUE
             }
           }
         }
-      }
-    }
+      })
+    })
 
-    for (let y = 0; y < currentPiece.value.shape.length; y++) {
-      for (let x = 0; x < currentPiece.value.shape[y].length; x++) {
-        if (currentPiece.value.shape[y][x] > 0) {
-          const boardY = currentY.value + y
-          const boardX = currentX.value + x
+    piece.shape.forEach((row, y) => {
+      row.forEach((cell, x) => {
+        if (cell > 0) {
+          const boardY = curY + y
+          const boardX = curX + x
           if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
-            display[boardY][boardX] = currentPiece.value.colorId
+            display[boardY][boardX] = piece.colorId
           }
         }
-      }
-    }
+      })
+    })
   }
 
   return display
@@ -401,32 +423,28 @@ const nextPieceBoard = computed(() => {
     .fill(0)
     .map(() => Array(NEXT_PIECE_SIZE).fill(0))
 
-  for (let y = 0; y < nextPiece.value.shape.length; y++) {
-    for (let x = 0; x < nextPiece.value.shape[y].length; x++) {
-      if (nextPiece.value.shape[y][x] > 0) {
-        result[y][x] = nextPiece.value.colorId
+  nextPiece.value.shape.forEach((row, y) => {
+    row.forEach((cell, x) => {
+      if (cell > 0) {
+        result[y][x] = nextPiece.value!.colorId
       }
-    }
-  }
+    })
+  })
 
   return result
 })
 
 const getCellColor = (colorId: number) => {
-  if (colorId === GHOST_VALUE) return { backgroundColor: GHOST_BACKGROUND }
-
-  for (let y = 0; y < BOARD_HEIGHT; y++) {
-    for (let x = 0; x < BOARD_WIDTH; x++) {
-      if (board.value[y][x].colorId === colorId) {
-        return { backgroundColor: board.value[y][x].color }
-      }
-    }
+  if (colorId === GHOST_VALUE) {
+    return { backgroundColor: GHOST_BACKGROUND }
   }
+
+  const cell = board.value.flat().find(c => c.colorId === colorId)
+  if (cell) return { backgroundColor: cell.color }
 
   if (currentPiece.value?.colorId === colorId) {
     return { backgroundColor: currentPiece.value.color }
   }
-
   if (nextPiece.value?.colorId === colorId) {
     return { backgroundColor: nextPiece.value.color }
   }
@@ -458,157 +476,78 @@ onUnmounted(() => {
 </script>
 
 <style scoped lang="scss">
-.tetris-container {
+.tetris-page {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
-}
 
-h1 {
-  text-align: center;
-  color: #ffffff;
-  margin-bottom: 30px;
-}
+  &__title {
+    text-align: center;
+    color: #ffffff;
+    margin-bottom: 30px;
+  }
 
-.game-area {
-  display: flex;
-  gap: 30px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
+  &__game-area {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
 
-.board {
-  background-color: #000000;
-  padding: 10px;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
-}
+  &__board {
+    background-color: #000000;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+  }
 
-.board-row {
-  display: flex;
-}
+  &__board-row {
+    display: flex;
+  }
 
-.board-cell {
-  width: 30px;
-  height: 30px;
-  border: 1px solid #333333;
-  background-color: #000000;
-  transition: background-color 0.1s;
-}
+  &__board-cell {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #333333;
+    background-color: #000000;
+    transition: background-color 0.1s;
 
-.board-cell.filled {
-  background-color: #ff4444;
-}
+    &_ghost {
+      background-color: rgba(255, 255, 255, 0.1);
+      border: 1px dashed #666666;
+    }
+  }
 
-.board-cell.ghost {
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px dashed #666666;
-}
+  &__info-panel {
+    min-width: 150px;
+    padding: 20px;
+    background-color: #1a1a1a;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
 
-.info-panel {
-  min-width: 150px;
-  padding: 20px;
-  background-color: #1a1a1a;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
+  &__navigation {
+    margin-top: 30px;
+    text-align: center;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+  }
 
-.next-piece {
-  text-align: center;
-  margin-bottom: 20px;
-}
+  &__nav-link {
+    display: inline-block;
+    margin: 0 10px;
+    padding: 8px 16px;
+    color: #ffffff;
+    text-decoration: none;
+    border: 1px solid #ffffff;
+    border-radius: 4px;
+    transition: all 0.3s;
 
-.next-board {
-  background-color: #000000;
-  padding: 10px;
-  border-radius: 8px;
-  margin-top: 10px;
-}
-
-.lines {
-  margin: 15px 0;
-  text-align: center;
-}
-
-.lines-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #ffffff;
-}
-
-.game-status {
-  text-align: center;
-  margin: 20px 0;
-  padding: 10px;
-  background-color: #333333;
-  color: #ffffff;
-  border-radius: 4px;
-}
-
-.controls {
-  margin-top: 30px;
-}
-
-.control-row {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin: 10px 0;
-}
-
-.control-btn {
-  width: 60px;
-  height: 60px;
-  font-size: 24px;
-  border: none;
-  border-radius: 8px;
-  background-color: #444444;
-  color: #ffffff;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.control-btn:hover:not(:disabled) {
-  background-color: #666666;
-}
-
-.control-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.pause-btn,
-.reset-btn {
-  background-color: #444444;
-}
-
-.pause-btn:hover:not(:disabled),
-.reset-btn:hover:not(:disabled) {
-  background-color: #666666;
-}
-
-.navigation {
-  margin-top: 30px;
-  text-align: center;
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-}
-
-.nav-link {
-  display: inline-block;
-  margin: 0 10px;
-  padding: 8px 16px;
-  color: #ffffff;
-  text-decoration: none;
-  border: 1px solid #ffffff;
-  border-radius: 4px;
-  transition: all 0.3s;
-}
-
-.nav-link:hover {
-  background-color: #ffffff;
-  color: #000000;
+    &:hover {
+      background-color: #ffffff;
+      color: #000000;
+    }
+  }
 }
 </style>

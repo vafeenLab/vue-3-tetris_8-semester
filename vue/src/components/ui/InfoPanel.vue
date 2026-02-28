@@ -1,36 +1,48 @@
 <template>
-  <div class="info-panel-content">
-    <div class="next-piece">
-      <h3>{{ TEXTS.NEXT_PIECE }}</h3>
-      <div class="next-board">
-        <div v-for="(row, y) in nextPieceBoard" :key="y" class="board-row">
+  <div class="info-panel">
+    <div class="info-panel__next-piece">
+      <h3 class="info-panel__heading">Следующая:</h3>
+      <div class="info-panel__next-board">
+        <div
+          v-for="(row, y) in nextPieceBoard"
+          :key="y"
+          class="info-panel__board-row"
+        >
           <div
             v-for="(cell, x) in row"
             :key="x"
-            class="board-cell small"
-            :class="{ filled: cell > 0 }"
+            class="info-panel__board-cell"
+            :class="{ 'info-panel__board-cell_filled': cell > 0 }"
             :style="cell > 0 ? getCellColor(cell) : {}"
           ></div>
         </div>
       </div>
     </div>
 
-    <div class="lines">
-      <h3>{{ TEXTS.LINES }}</h3>
-      <div class="lines-value">{{ linesCleared }}</div>
+    <div class="info-panel__lines">
+      <h3 class="info-panel__heading">Линий:</h3>
+      <div class="info-panel__lines-value">{{ linesCleared }}</div>
     </div>
 
-    <div class="game-status">
-      <h3 v-if="gameStatus === GAME_STATUS.GAME_OVER">{{ TEXTS.GAME_OVER }}</h3>
-      <h3 v-else-if="gameStatus === GAME_STATUS.PAUSED">{{ TEXTS.PAUSED }}</h3>
-      <h3 v-else-if="gameStatus === GAME_STATUS.IDLE">{{ TEXTS.IDLE }}</h3>
-      <h3 v-else>{{ TEXTS.PLAYING }}</h3>
+    <div class="info-panel__game-status">
+      <h3 v-if="gameStatus === GAME_STATUS.GAME_OVER" class="info-panel__status-text">
+        Игра окончена!
+      </h3>
+      <h3 v-else-if="gameStatus === GAME_STATUS.PAUSED" class="info-panel__status-text">
+        Пауза
+      </h3>
+      <h3 v-else-if="gameStatus === GAME_STATUS.IDLE" class="info-panel__status-text">
+        Готово к игре
+      </h3>
+      <h3 v-else class="info-panel__status-text">
+        Игра идет
+      </h3>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { TEXTS, GAME_STATUS } from '../../constants/constants'
+import { GAME_STATUS } from '../../constants/constants'
 
 defineProps<{
   nextPieceBoard: number[][]
@@ -41,58 +53,61 @@ defineProps<{
 </script>
 
 <style scoped lang="scss">
-.next-piece {
-  text-align: center;
-  margin-bottom: 20px;
-}
+.info-panel {
+  &__next-piece {
+    text-align: center;
+    margin-bottom: 20px;
+  }
 
-.next-board {
-  background-color: #000000;
-  padding: 10px;
-  border-radius: 8px;
-  margin-top: 10px;
-  display: inline-block;
-}
+  &__heading {
+    margin: 0 0 10px 0;
+    color: #ffffff;
+  }
 
-.board-row {
-  display: flex;
-  justify-content: center;
-}
+  &__next-board {
+    background-color: #000000;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 10px;
+    display: inline-block
+  }
 
-.board-cell {
-  width: 30px;
-  height: 30px;
-  border: 1px solid #333333;
-  background-color: #000000;
-  transition: background-color 0.1s;
-}
+  &__board-row {
+    display: flex;
+    justify-content: center;
+  }
 
-.board-cell.small {
-  width: 20px;
-  height: 20px;
-}
+  &__board-cell {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #333333;
+    background-color: #000000;
+    transition: background-color 0.1s;
+  }
 
-.board-cell.filled {
-  background-color: #ff4444;
-}
+  &__lines {
+    margin: 15px 0;
+    text-align: center;
+  }
 
-.lines {
-  margin: 15px 0;
-  text-align: center;
-}
+  &__lines-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ffffff;
+  }
 
-.lines-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #ffffff;
-}
+  &__game-status {
+    text-align: center;
+    margin: 20px 0;
+    padding: 10px;
+    background-color: #333333;
+    color: #ffffff;
+    border-radius: 4px;
+  }
 
-.game-status {
-  text-align: center;
-  margin: 20px 0;
-  padding: 10px;
-  background-color: #333333;
-  color: #ffffff;
-  border-radius: 4px;
+  &__status-text {
+    margin: 0;
+    font-size: 1.2em;
+  }
 }
 </style>
