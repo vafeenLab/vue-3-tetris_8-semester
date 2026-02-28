@@ -13,19 +13,6 @@ export const MAX_COLOR_ID = 1000000
 export const GHOST_BACKGROUND = 'rgba(255, 255, 255, 0.2)'
 export const ERROR_COLOR = '#ff4444'
 
-export const TEXTS = {
-  TITLE: 'Тетрис',
-  NEXT_PIECE: 'Следующая:',
-  LINES: 'Линии:',
-  GAME_OVER: 'Игра окончена!',
-  PAUSED: 'Пауза',
-  IDLE: 'Игра не началась',
-  PLAYING: 'Игра идет',
-  HOME: 'На главную',
-  EXAMPLE: 'На Example',
-  DEMO: 'На Demo',
-}
-
 export const GAME_STATUS = {
   IDLE: 'idle',
   PLAYING: 'playing',
