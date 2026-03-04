@@ -1,55 +1,87 @@
 <template>
-  <div class="shape-editor">
-    <h2 class="shape-editor__title">Редактор фигур</h2>
+      <div class="shape-editor">
+        <h2 class="shape-editor__title">Редактор фигур</h2>
+        <div class="shape-editor__list">
+            <select
+                class="shape-editor__select"
+                :value="selectedId"
+                @change="(e) => handleSelectChange(e)"
+            >
+                <option
+                    v-for="shape in mockShape"
+                    :key="shape.id"
+                    :value="shape.id"
+                >
+                    {{ shape.name }}
+                </option>
+            </select>
 
-    <div class="shape-editor__list">
-      <select class="shape-editor__select" :value="selectedId" @change="handleSelectChange">
-        <option v-for="shape in allShapes" :key="shape.id" :value="shape.id">
-          {{ shape.name }} {{ shape.id.startsWith('base-') ? '(базовая)' : '' }}
-        </option>
-      </select>
-
-      <button class="shape-editor__btn shape-editor__btn--new" @click="handleNew">
-        Новая
-      </button>
-      <button class="shape-editor__btn shape-editor__btn--delete"
-        :disabled="!selectedId || selectedId.startsWith('base-')" @click="handleDelete">
-        Удалить
-      </button>
-    </div>
-
-    <div class="shape-editor__grid">
-      <div class="shape-editor__grid-container">
-        <div v-for="(row, y) in grid" :key="y" class="shape-editor__grid-row">
-          <div v-for="(cell, x) in row" :key="x" class="shape-editor__grid-cell"
-            :class="{ 'shape-editor__grid-cell_filled': cell === 1 }"
-            :style="cell === 1 ? { backgroundColor: currentColor } : {}" @click="() => toggleCell(y, x)"></div>
+            <button
+                class="shape-editor__btn shape-editor__btn--new"
+                @click="handleNew"
+            >
+                Новая
+            </button>
+            <button
+                class="shape-editor__btn shape-editor__btn--delete"
+                :disabled="!selectedId || selectedId.startsWith('base-')"
+                @click="handleDelete"
+            >
+                Удалить
+            </button>
         </div>
       </div>
+           <div class="shape-editor__grid">
+            <div
+                v-for="(row, y) in grid"
+                :key="y"
+                class="shape-editor__grid-row"
+            >
+                <div
+                    v-for="(cell, x) in row"
+                    :key="x"
+                    class="shape-editor__grid-cell"
+                    :class="{ 'shape-editor__grid-cell_filled': cell === 1 }"
+                    @click="() => toggleCell(y, x)"
+                ></div>
+            </div>
 
-      <div class="shape-editor__params">
-        <label class="shape-editor__label">
-          Название:
-          <input v-model="currentName" type="text" class="shape-editor__input" />
-        </label>
+            <div class="shape-editor__params">
+                <label class="shape-editor__label">
+                    Название:
+                    <input
+                        v-model="currentName"
+                        type="text"
+                        class="shape-editor__input"
+                    />
+                </label>
 
-        <label class="shape-editor__label">
-          Цвет:
-          <input v-model="currentColor" type="color" class="shape-editor__color" />
-        </label>
-      </div>
+                <label class="shape-editor__label">
+                    Цвет:
+                    <input
+                        v-model="currentColor"
+                        type="color"
+                        class="shape-editor__color"
+                    />
+                </label>
+            </div>
 
-      <div class="shape-editor__actions">
-        <button class="shape-editor__btn shape-editor__btn--save-new" @click="handleSaveNew">
-          Сохранить как новую
-        </button>
+            <div class="shape-editor__actions">
+                <button
+                    class="shape-editor__btn shape-editor__btn--save-new"
+                    @click="handleSaveNew"
+                >
+                    Сохранить как новую
+                </button>
 
-        <button class="shape-editor__btn shape-editor__btn--update"
-          :disabled="!selectedId || selectedId.startsWith('base-')" @click="handleUpdate">
-          Обновить
-        </button>
-      </div>
-    </div>
+                <button
+                    class="shape-editor__btn shape-editor__btn--update"
+                    :disabled="!selectedId"
+                    @click="handleUpdate"
+                >
+                    Обновить
+                </button>
+            </div>
 
     <div class="shape-editor__footer">
       <RouterLink :to="{ name: $routes.TETRIS }" class="shape-editor__back-btn">
