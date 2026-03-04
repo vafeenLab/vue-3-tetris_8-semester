@@ -51,6 +51,11 @@
       >
         To Example
       </RouterLink>
+      <RouterLink
+        :to="{ name: $routes.EDITOR }"
+        class="tetris-page__nav-link"
+      >Редактор фигур
+      </RouterLink>
     </div>
   </div>
 </template>
@@ -59,6 +64,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import InfoPanel from '../ui/InfoPanel.vue'
 import Controls from '../ui/Controls.vue'
+import ShapeEditor from './ShapeEditor.vue'
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
