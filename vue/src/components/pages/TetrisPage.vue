@@ -70,10 +70,11 @@ import {
   BOARD_HEIGHT,
   GHOST_VALUE,
   NEXT_PIECE_SIZE,
+  GHOST_BACKGROUND,
+  ERROR_COLOR,
   GAME_STATUS,
   DIFFICULTY,
   BASE_SPEEDS,
-  BASE_PIECES
 } from '../../constants/constants'
 
 interface Cell {
@@ -123,7 +124,7 @@ const collision = (shape: number[][], offsetX: number, offsetY: number): boolean
       }
       const boardX = offsetX + x
       const boardY = offsetY + y
-      if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) { 
+      if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) {
         return true
       }
       if (boardY >= 0 && board.value[boardY]?.[boardX]?.value !== 0) {
@@ -189,11 +190,11 @@ const actions = {
         if (cell !== 0) {
           const boardY = posY + y
           const boardX = posX + x
-          if (boardY >= 0 
-          && boardY < BOARD_HEIGHT 
-          && boardX >= 0 
-          && boardX < BOARD_WIDTH 
-          && board.value[boardY][boardX].value === 0) {
+          if (boardY >= 0
+            && boardY < BOARD_HEIGHT
+            && boardX >= 0
+            && boardX < BOARD_WIDTH
+            && board.value[boardY][boardX].value === 0) {
             board.value[boardY][boardX] = {
               value: piece.colorId,
               color: piece.color,
@@ -212,8 +213,8 @@ const actions = {
       if (board.value[y].every(cell => cell.value !== 0)) {
         board.value.splice(y, 1)
         board.value.unshift(
-          Array(BOARD_WIDTH).fill(0).map(() => ({ 
-            value: 0, color: null, colorId: null 
+          Array(BOARD_WIDTH).fill(0).map(() => ({
+            value: 0, color: null, colorId: null
           }))
         )
         linesRemoved++
@@ -237,8 +238,8 @@ const actions = {
     const newX = Math.floor((BOARD_WIDTH - (currentPiece.value?.shape[0].length || 0)) / 2)
     actions.setCurrentPosition(newX, 0)
 
-    if (currentPiece.value 
-    && collision(currentPiece.value.shape, currentX.value, currentY.value)) {
+    if (currentPiece.value
+      && collision(currentPiece.value.shape, currentX.value, currentY.value)) {
       actions.setGameStatus(GAME_STATUS.GAME_OVER)
       if (gameInterval) {
         clearInterval(gameInterval)
@@ -441,14 +442,14 @@ const nextPieceBoard = computed(() => {
 
 const baseInterval = computed(() => BASE_SPEEDS[difficulty.value])
 const currentInterval = computed(() => {
-  // Увеличиваем скорость на 1% за каждую линию
-  const speedMultiplier = 1 / (1 + linesCleared.value * 0.01)
-  return Math.max(baseInterval.value * speedMultiplier, 50) // не быстрее 50мс
+  const factor = 1 + linesCleared.value * 0.01
+
+  return Math.max(baseInterval.value / factor, 50) //no faster than 50ms
 })
 
 const getCellColor = (colorId: number) => {
   if (colorId === GHOST_VALUE) {
-    return { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
+    return { backgroundColor: GHOST_BACKGROUND }
   }
 
   const cell = board.value.flat().find(c => c.colorId === colorId)
@@ -461,7 +462,7 @@ const getCellColor = (colorId: number) => {
     return { backgroundColor: nextPiece.value.color }
   }
 
-  return { backgroundColor: '#ff4444' }
+  return { backgroundColor: ERROR_COLOR }
 }
 
 const startGameLoop = () => {

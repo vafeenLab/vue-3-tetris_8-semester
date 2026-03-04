@@ -2,13 +2,6 @@ export const BOARD_WIDTH = 10
 export const BOARD_HEIGHT = 22
 export const GHOST_VALUE = -1
 export const NEXT_PIECE_SIZE = 4
-export const MIN_HUE = 0
-export const MAX_HUE = 360
-export const MIN_SATURATION = 70
-export const MAX_SATURATION = 30
-export const MIN_LIGHTNESS = 50
-export const MAX_LIGHTNESS = 20
-export const MAX_COLOR_ID = 1000000
 export const GHOST_BACKGROUND = 'rgba(255, 255, 255, 0.2)'
 export const ERROR_COLOR = '#ff4444'
 
@@ -41,7 +34,6 @@ export const CONTROLS = {
   RESET: '↺',
 }
 
-// Базовые фигуры с цветами
 export const BASE_PIECES = [
   {
     id: 'base-1',
