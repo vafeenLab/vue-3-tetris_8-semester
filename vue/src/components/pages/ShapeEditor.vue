@@ -5,7 +5,7 @@
             <select
                 class="shape-editor__select"
                 :value="selectedId"
-                @change="() => handleSelectChange()"
+                @change="(e) => handleSelectChange(e)"
             >
                 <option
                     v-for="shape in mockShape"
@@ -86,7 +86,7 @@
     </div>
 </template>
 
-<script setup lang="ts">
+<script>
 import {ref} from 'vue'
 
 const mockShapes = ref([
@@ -130,17 +130,29 @@ const handleNew = () => {
 }
 
 const handleDelete = () => {
-  if (!selectedId.value || selectedId.value.startsWith('base-')) return
+  if (!selectedId.value || selectedId.value.startsWith('base-')) {
+    return
+  }
   handleNew()
 }
 
 const handleSaveNew = () => {
-  console.log('Сохранить как новую', { name: currentName.value, color: currentColor.value, grid: grid.value })
+  console.log('Сохранить как новую', { 
+    name: currentName.value, 
+    color: currentColor.value, 
+    grid: grid.value 
+})
 }
 
 const handleUpdate = () => {
-  if (!selectedId.value) return
-  console.log('Обновить фигуру', selectedId.value, { name: currentName.value, color: currentColor.value, grid: grid.value })
+  if (!selectedId.value) {
+    return
+  }
+  console.log('Обновить фигуру', selectedId.value, { 
+    name: currentName.value, 
+    color: currentColor.value, 
+    grid: grid.value 
+})
 }
 </script>
 

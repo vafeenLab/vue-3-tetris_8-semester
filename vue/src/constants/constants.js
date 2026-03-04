@@ -1,5 +1,5 @@
 export const BOARD_WIDTH = 10
-export const BOARD_HEIGHT = 20
+export const BOARD_HEIGHT = 22
 //export const BASE_SPEED = 500
 export const GHOST_VALUE = -1
 export const NEXT_PIECE_SIZE = 4
