@@ -62,28 +62,18 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useStore } from 'vuex'
 import InfoPanel from '../ui/InfoPanel.vue'
 import Controls from '../ui/Controls.vue'
-import ShapeEditor from './ShapeEditor.vue'
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
   GHOST_VALUE,
   NEXT_PIECE_SIZE,
-  MIN_HUE,
-  MAX_HUE,
-  MIN_SATURATION,
-  MAX_SATURATION,
-  MIN_LIGHTNESS,
-  MAX_LIGHTNESS,
-  MAX_COLOR_ID,
-  GHOST_BACKGROUND,
-  ERROR_COLOR,
   GAME_STATUS,
-  CONTROLS,
   DIFFICULTY,
   BASE_SPEEDS,
-  PIECE_SHAPES
+  BASE_PIECES
 } from '../../constants/constants'
 
 interface Cell {
@@ -96,7 +86,11 @@ interface Piece {
   shape: number[][]
   color: string
   colorId: number
+  id?: string
 }
+
+const store = useStore()
+const allShapes = computed(() => store.getters['shapes/getAllShapes'])
 
 const board = ref<Cell[][]>([])
 const currentPiece = ref<Piece | null>(null)
@@ -108,22 +102,17 @@ const gameStatus = ref<string>(GAME_STATUS.IDLE)
 const difficulty = ref<string>(DIFFICULTY.MEDIUM)
 let gameInterval: ReturnType<typeof setInterval> | null = null
 
-const generateRandomColor = (): string => {
-  const hue = Math.floor(Math.random() * (MAX_HUE - MIN_HUE) + MIN_HUE)
-  const saturation = MIN_SATURATION + Math.floor(Math.random() * MAX_SATURATION)
-  const lightness = MIN_LIGHTNESS + Math.floor(Math.random() * MAX_LIGHTNESS)
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`
-}
-
-const createPiece = (shape: number[][]): Piece => ({
-  shape: shape.map((row) => [...row]),
-  color: generateRandomColor(),
-  colorId: Math.floor(Math.random() * MAX_COLOR_ID),
+const createPiece = (shapeData: { shape: number[][], color: string, id?: string }): Piece => ({
+  shape: shapeData.shape.map((row) => [...row]),
+  color: shapeData.color,
+  colorId: shapeData.id ? parseInt(shapeData.id.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000) : Math.floor(Math.random() * 1000000),
+  id: shapeData.id
 })
 
 const getRandomPiece = (): Piece => {
-  const randomIndex = Math.floor(Math.random() * PIECE_SHAPES.length)
-  return createPiece(PIECE_SHAPES[randomIndex] as number[][])
+  const shapes = allShapes.value
+  const randomIndex = Math.floor(Math.random() * shapes.length)
+  return createPiece(shapes[randomIndex])
 }
 
 const collision = (shape: number[][], offsetX: number, offsetY: number): boolean => {
@@ -452,14 +441,14 @@ const nextPieceBoard = computed(() => {
 
 const baseInterval = computed(() => BASE_SPEEDS[difficulty.value])
 const currentInterval = computed(() => {
-  const factor = 1 + linesCleared.value * 0.01
-
-  return Math.max(baseInterval.value / factor, 50) //no faster than 50ms
+  // Увеличиваем скорость на 1% за каждую линию
+  const speedMultiplier = 1 / (1 + linesCleared.value * 0.01)
+  return Math.max(baseInterval.value * speedMultiplier, 50) // не быстрее 50мс
 })
 
 const getCellColor = (colorId: number) => {
   if (colorId === GHOST_VALUE) {
-    return { backgroundColor: GHOST_BACKGROUND }
+    return { backgroundColor: 'rgba(255, 255, 255, 0.2)' }
   }
 
   const cell = board.value.flat().find(c => c.colorId === colorId)
@@ -472,7 +461,7 @@ const getCellColor = (colorId: number) => {
     return { backgroundColor: nextPiece.value.color }
   }
 
-  return { backgroundColor: ERROR_COLOR }
+  return { backgroundColor: '#ff4444' }
 }
 
 const startGameLoop = () => {
