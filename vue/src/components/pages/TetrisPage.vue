@@ -62,28 +62,19 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useStore } from 'vuex'
 import InfoPanel from '../ui/InfoPanel.vue'
 import Controls from '../ui/Controls.vue'
-import ShapeEditor from './ShapeEditor.vue'
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
   GHOST_VALUE,
   NEXT_PIECE_SIZE,
-  MIN_HUE,
-  MAX_HUE,
-  MIN_SATURATION,
-  MAX_SATURATION,
-  MIN_LIGHTNESS,
-  MAX_LIGHTNESS,
-  MAX_COLOR_ID,
   GHOST_BACKGROUND,
   ERROR_COLOR,
   GAME_STATUS,
-  CONTROLS,
   DIFFICULTY,
   BASE_SPEEDS,
-  PIECE_SHAPES
 } from '../../constants/constants'
 
 interface Cell {
@@ -96,7 +87,11 @@ interface Piece {
   shape: number[][]
   color: string
   colorId: number
+  id?: string
 }
+
+const store = useStore()
+const allShapes = computed(() => store.getters['shapes/getAllShapes'])
 
 const board = ref<Cell[][]>([])
 const currentPiece = ref<Piece | null>(null)
@@ -108,22 +103,17 @@ const gameStatus = ref<string>(GAME_STATUS.IDLE)
 const difficulty = ref<string>(DIFFICULTY.MEDIUM)
 let gameInterval: ReturnType<typeof setInterval> | null = null
 
-const generateRandomColor = (): string => {
-  const hue = Math.floor(Math.random() * (MAX_HUE - MIN_HUE) + MIN_HUE)
-  const saturation = MIN_SATURATION + Math.floor(Math.random() * MAX_SATURATION)
-  const lightness = MIN_LIGHTNESS + Math.floor(Math.random() * MAX_LIGHTNESS)
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`
-}
-
-const createPiece = (shape: number[][]): Piece => ({
-  shape: shape.map((row) => [...row]),
-  color: generateRandomColor(),
-  colorId: Math.floor(Math.random() * MAX_COLOR_ID),
+const createPiece = (shapeData: { shape: number[][], color: string, id?: string }): Piece => ({
+  shape: shapeData.shape.map((row) => [...row]),
+  color: shapeData.color,
+  colorId: shapeData.id ? parseInt(shapeData.id.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000) : Math.floor(Math.random() * 1000000),
+  id: shapeData.id
 })
 
 const getRandomPiece = (): Piece => {
-  const randomIndex = Math.floor(Math.random() * PIECE_SHAPES.length)
-  return createPiece(PIECE_SHAPES[randomIndex] as number[][])
+  const shapes = allShapes.value
+  const randomIndex = Math.floor(Math.random() * shapes.length)
+  return createPiece(shapes[randomIndex])
 }
 
 const collision = (shape: number[][], offsetX: number, offsetY: number): boolean => {
@@ -134,7 +124,7 @@ const collision = (shape: number[][], offsetX: number, offsetY: number): boolean
       }
       const boardX = offsetX + x
       const boardY = offsetY + y
-      if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) { 
+      if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) {
         return true
       }
       if (boardY >= 0 && board.value[boardY]?.[boardX]?.value !== 0) {
@@ -200,11 +190,11 @@ const actions = {
         if (cell !== 0) {
           const boardY = posY + y
           const boardX = posX + x
-          if (boardY >= 0 
-          && boardY < BOARD_HEIGHT 
-          && boardX >= 0 
-          && boardX < BOARD_WIDTH 
-          && board.value[boardY][boardX].value === 0) {
+          if (boardY >= 0
+            && boardY < BOARD_HEIGHT
+            && boardX >= 0
+            && boardX < BOARD_WIDTH
+            && board.value[boardY][boardX].value === 0) {
             board.value[boardY][boardX] = {
               value: piece.colorId,
               color: piece.color,
@@ -223,8 +213,8 @@ const actions = {
       if (board.value[y].every(cell => cell.value !== 0)) {
         board.value.splice(y, 1)
         board.value.unshift(
-          Array(BOARD_WIDTH).fill(0).map(() => ({ 
-            value: 0, color: null, colorId: null 
+          Array(BOARD_WIDTH).fill(0).map(() => ({
+            value: 0, color: null, colorId: null
           }))
         )
         linesRemoved++
@@ -248,8 +238,8 @@ const actions = {
     const newX = Math.floor((BOARD_WIDTH - (currentPiece.value?.shape[0].length || 0)) / 2)
     actions.setCurrentPosition(newX, 0)
 
-    if (currentPiece.value 
-    && collision(currentPiece.value.shape, currentX.value, currentY.value)) {
+    if (currentPiece.value
+      && collision(currentPiece.value.shape, currentX.value, currentY.value)) {
       actions.setGameStatus(GAME_STATUS.GAME_OVER)
       if (gameInterval) {
         clearInterval(gameInterval)
