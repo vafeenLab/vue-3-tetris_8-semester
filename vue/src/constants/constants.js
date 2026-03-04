@@ -1,6 +1,6 @@
 export const BOARD_WIDTH = 10
 export const BOARD_HEIGHT = 20
-export const BASE_SPEED = 500
+//export const BASE_SPEED = 500
 export const GHOST_VALUE = -1
 export const NEXT_PIECE_SIZE = 4
 export const MIN_HUE = 0
@@ -18,6 +18,18 @@ export const GAME_STATUS = {
   PLAYING: 'playing',
   PAUSED: 'paused',
   GAME_OVER: 'gameOver',
+}
+
+export const DIFFICULTY = {
+  EASY: 'easy',
+  MEDIUM: 'medium',
+  HARD: 'hard'
+}
+
+export const BASE_SPEEDS = {
+  [DIFFICULTY.EASY]: 600,
+  [DIFFICULTY.MEDIUM]: 400,
+  [DIFFICULTY.HARD]: 250
 }
 
 export const CONTROLS = {

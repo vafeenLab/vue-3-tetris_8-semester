@@ -28,6 +28,8 @@
           :lines-cleared="linesCleared"
           :game-status="gameStatus"
           :get-cell-color="getCellColor"
+          :difficulty="difficulty"
+          :on-difficulty-changed="actions.changeDifficulty"
         />
         <Controls
           :game-status="gameStatus"
@@ -60,7 +62,6 @@ import Controls from '../ui/Controls.vue'
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
-  BASE_SPEED,
   GHOST_VALUE,
   NEXT_PIECE_SIZE,
   MIN_HUE,
@@ -74,6 +75,8 @@ import {
   ERROR_COLOR,
   GAME_STATUS,
   CONTROLS,
+  DIFFICULTY,
+  BASE_SPEEDS,
   PIECE_SHAPES
 } from '../../constants/constants'
 
@@ -96,6 +99,7 @@ const currentX = ref(0)
 const currentY = ref(0)
 const linesCleared = ref(0)
 const gameStatus = ref<string>(GAME_STATUS.IDLE)
+const difficulty = ref<string>(DIFFICULTY.MEDIUM)
 let gameInterval: ReturnType<typeof setInterval> | null = null
 
 const generateRandomColor = (): string => {
@@ -171,6 +175,7 @@ const actions = {
 
   addLines: (lines: number) => {
     linesCleared.value += lines
+    startGameLoop()
   },
 
   resetLines: () => {
@@ -353,6 +358,11 @@ const actions = {
     }
   },
 
+  changeDifficulty: (newDifficulty: string) => {
+    difficulty.value = newDifficulty
+    startGameLoop()
+  },
+
   resetGame: () => {
     if (gameInterval) {
       clearInterval(gameInterval)
@@ -434,6 +444,13 @@ const nextPieceBoard = computed(() => {
   return result
 })
 
+const baseInterval = computed(() => BASE_SPEEDS[difficulty.value])
+const currentInterval = computed(() => {
+  const factor = 1 + linesCleared.value * 0.01
+
+  return Math.max(baseInterval.value / factor, 50) //no faster than 50ms
+})
+
 const getCellColor = (colorId: number) => {
   if (colorId === GHOST_VALUE) {
     return { backgroundColor: GHOST_BACKGROUND }
@@ -461,7 +478,7 @@ const startGameLoop = () => {
     if (gameStatus.value === GAME_STATUS.PLAYING) {
       actions.movePieceDown()
     }
-  }, BASE_SPEED)
+  }, currentInterval.value)
 }
 
 onMounted(() => {

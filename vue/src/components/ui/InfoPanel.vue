@@ -19,6 +19,21 @@
       </div>
     </div>
 
+    <div class="info-panel__difficulty">
+      <h3 class="info-panel__difficulty__header">Сложность</h3>
+      <div class="info-panel__difficulty__selector">
+        <select 
+        :disabled="gameStatus !== GAME_STATUS.IDLE && gameStatus !== GAME_STATUS.GAME_OVER"
+        :value="difficulty" 
+        @change="(e) => emitDifficultyChange(e)"
+        >
+          <option :value="DIFFICULTY.EASY">Легкая</option>
+          <option :value="DIFFICULTY.MEDIUM">Средняя</option>
+          <option :value="DIFFICULTY.HARD">Сложная</option>
+        </select>
+      </div>
+    </div>
+
     <div class="info-panel__lines">
       <h3 class="info-panel__heading">Линий:</h3>
       <div class="info-panel__lines-value">{{ linesCleared }}</div>
@@ -42,14 +57,22 @@
 </template>
 
 <script setup lang="ts">
-import { GAME_STATUS } from '../../constants/constants'
+import { GAME_STATUS, DIFFICULTY} from '../../constants/constants'
 
-defineProps<{
+const { onDifficultyChanged } = defineProps<{
   nextPieceBoard: number[][]
   linesCleared: number
   gameStatus: string
   getCellColor: (colorId: number) => { backgroundColor: string }
+  difficulty: string
+  onDifficultyChanged: (newDifficulty: string) => void
 }>()
+
+const emitDifficultyChange = (e: Event) => {
+  const value = (e.target as HTMLSelectElement).value
+
+  return onDifficultyChanged?.(value)
+}
 </script>
 
 <style scoped lang="scss">
@@ -83,6 +106,38 @@ defineProps<{
     border: 1px solid #333333;
     background-color: #000000;
     transition: background-color 0.1s;
+  }
+
+  &__difficulty {
+    &__header {
+      margin: 15px 0;
+      text-align: center;
+      font-size: 20px;
+      color: #ffffff;
+    }
+
+    &__selector {
+      select {
+        appearance: none;
+        width: 100%;
+        background-color: #2a2a2a;
+        color: #ffffff;
+        cursor: pointer;
+        text-align: center;
+      }
+
+      justify-content: center;
+
+      &:hover {
+        border-color: #666;
+        background-color: #333;
+      }
+      
+      &:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+    }
   }
 
   &__lines {
