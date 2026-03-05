@@ -10,9 +10,9 @@ export default {
   getters: {
     getAllShapes: (state) => [...BASE_PIECES, ...state.customShapes],
     getShapeById: (state) => (id) => {
-      const base = BASE_PIECES.find(p => p.id === id)
-      if (base) return base
-      return state.customShapes.find(p => p.id === id)
+      const custom = state.customShapes.find(p => p.id === id)
+      if (custom) return custom
+      return BASE_PIECES.find(p => p.id === id)
     }
   },
   mutations: {
@@ -23,6 +23,11 @@ export default {
       const index = state.customShapes.findIndex(s => s.id === id)
       if (index !== -1) {
         state.customShapes[index] = { ...state.customShapes[index], ...updates }
+      } else {
+        const baseShape = BASE_PIECES.find(p => p.id === id)
+        if (baseShape) {
+          state.customShapes.push({ ...baseShape, ...updates })
+        }
       }
     },
     DELETE_SHAPE: (state, id) => {

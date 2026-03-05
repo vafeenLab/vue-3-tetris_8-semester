@@ -79,7 +79,7 @@
 
                 <button
                     class="shape-editor__btn shape-editor__btn--update"
-                    :disabled="!selectedId || selectedId.startsWith('base-')"
+                    :disabled="!selectedId"
                     @click="() => handleUpdate()"
                 >
                     Обновить
