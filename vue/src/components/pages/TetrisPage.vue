@@ -29,7 +29,7 @@
           :game-status="gameStatus"
           :get-cell-color="getCellColor"
           :difficulty="difficulty"
-          :on-difficulty-changed="actions.changeDifficulty"
+          :on-difficulty-changed="(newDifficulty) => actions.changeDifficulty(newDifficulty)"
         />
         <Controls
           :game-status="gameStatus"
