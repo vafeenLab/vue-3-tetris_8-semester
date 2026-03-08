@@ -140,7 +140,6 @@ const loadShape = (id) => {
     })
   }
   grid.value = newGrid
-  console.log(grid)
 }
 
 const handleSelectChange = (e) => {
