@@ -29,7 +29,7 @@
           :game-status="gameStatus"
           :get-cell-color="getCellColor"
           :difficulty="difficulty"
-          :on-difficulty-changed="(newDifficulty) => actions.changeDifficulty(newDifficulty)"
+          @difficulty-changed="(val) => actions.changeDifficulty(val)"
         />
         <Controls
           :game-status="gameStatus"
@@ -76,19 +76,7 @@ import {
   DIFFICULTY,
   BASE_SPEEDS,
 } from '../../constants/constants'
-
-interface Cell {
-  value: number
-  color: string | null
-  colorId: number | null
-}
-
-interface Piece {
-  shape: number[][]
-  color: string
-  colorId: number
-  id?: string
-}
+import { Cell, Piece } from '@/types/board'
 
 const store = useStore()
 const allShapes = computed(() => store.getters['shapes/getAllShapes'])
@@ -103,10 +91,20 @@ const gameStatus = ref<string>(GAME_STATUS.IDLE)
 const difficulty = ref<string>(DIFFICULTY.MEDIUM)
 let gameInterval: ReturnType<typeof setInterval> | null = null
 
+const extractNumber = (id?: string) => {
+  if (!id) {
+    return null
+  }
+
+  const num = parseInt(id.replace(/\D/g, ''))
+
+  return isNaN(num) ? null : num
+}
+
 const createPiece = (shapeData: { shape: number[][], color: string, id?: string }): Piece => ({
   shape: shapeData.shape.map((row) => [...row]),
   color: shapeData.color,
-  colorId: shapeData.id ? parseInt(shapeData.id.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000) : Math.floor(Math.random() * 1000000),
+  colorId: extractNumber(shapeData.id) ?? Math.floor(Math.random() * 1000000),
   id: shapeData.id
 })
 
@@ -453,7 +451,9 @@ const getCellColor = (colorId: number) => {
   }
 
   const cell = board.value.flat().find(c => c.colorId === colorId)
-  if (cell) return { backgroundColor: cell.color }
+  if (cell) {
+    return {backgroundColor: cell.color}
+  }
 
   if (currentPiece.value?.colorId === colorId) {
     return { backgroundColor: currentPiece.value.color }
