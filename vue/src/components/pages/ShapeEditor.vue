@@ -121,8 +121,105 @@ export default {
       'addShape',
       'updateShape',
       'deleteShape'
-    ])
-    //other methods to be written...
+    ]),
+    loadShape(id) {
+      if (!id) {
+        return
+      }
+
+      const shape = this.getShapeById(id)
+      if (!shape) {
+        return
+      }
+      
+      this.currentName = shape.name || ''
+      this.currentColor = shape.color || '#0000FF'
+
+      const size = 4
+      const newGrid = Array(size).fill(0).map(() => Array(size).fill(0))
+
+      if (shape.shape && Array.isArray(shape.shape)) {
+        shape.shape.forEach((row, y) => {
+          if (Array.isArray(row)) {
+            row.forEach((cell, x) => {
+              if (y < size && x < size) {
+                newGrid[y][x] = cell
+              }
+            })
+          }
+        })
+      }
+
+      this.grid = newGrid
+    },
+    handleSelectChange(e) {
+      this.selectedId = e.target.value
+      this.loadShape(this.selectedId)
+    },
+    toggleCell(y, x) {
+      const newGrid = this.grid.map(row => [...row])
+      newGrid[y][x] = newGrid[y][x] ? 0 : 1
+      this.grid = newGrid
+    },
+    handleNew() {
+      this.selectedId = null
+      this.currentName = ''
+      this.currentColor = '#000000'
+      this.grid = Array(4).fill(0).map(() => Array(4).fill(0))
+    },
+    handleDelete() {
+      if (!this.selectedId || this.selectedId.startsWith('base-')) {
+        return
+      }
+      this.deleteShape(this.selectedId)
+      this.selectedId = 'base-1'
+      this.loadShape('base-1')
+    },
+    getCleanShape() {
+      if (!this.grid || !this.grid.length) {
+        return [[1]]
+      }
+      let shape = this.grid.filter(row => row.some(cell => cell === 1))
+      if (shape.length === 0) {
+        return [[1]]
+      }
+      const cols = shape[0].length
+      let minCol = cols
+      let maxCol = 0
+      shape.forEach(row => {
+        row.forEach((cell, x) => {
+          if (cell === 1) {
+            minCol = Math.min(minCol, x)
+            maxCol = Math.max(maxCol, x)
+          }
+        })
+      })
+      if (maxCol >= minCol) {
+        shape = shape.map(row => row.slice(minCol, maxCol + 1))
+      }
+      return shape
+    },
+    handleSaveNew() {
+      const newShape = {
+        id: 'custom-' + Date.now(),
+        name: this.currentName || 'Новая фигура',
+        color: this.currentColor,
+        shape: this.getCleanShape()
+      }
+      this.addShape(newShape)
+      this.selectedId = newShape.id
+    },
+    handleUpdate() {
+      if (!this.selectedId) {
+        return
+      }
+      this.updateShape({
+        id: this.selectedId,
+        name: this.currentName,
+        color: this.currentColor,
+        shape: this.getCleanShape()
+      })
+    }
   },
   mounted () {
     this.loadShape(this.selectedId)
