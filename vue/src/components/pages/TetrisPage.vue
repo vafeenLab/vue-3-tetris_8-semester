@@ -29,7 +29,7 @@
           :game-status="gameStatus"
           :get-cell-color="getCellColor"
           :difficulty="difficulty"
-          :on-difficulty-changed="(newDifficulty) => actions.changeDifficulty(newDifficulty)"
+          @difficulty-changed="(val) => actions.changeDifficulty(val)"
         />
         <Controls
           :game-status="gameStatus"
@@ -60,9 +60,8 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useStore } from 'vuex'
+<script>
+import { mapGetters } from 'vuex'
 import InfoPanel from '../ui/InfoPanel.vue'
 import Controls from '../ui/Controls.vue'
 import {
@@ -74,418 +73,453 @@ import {
   ERROR_COLOR,
   GAME_STATUS,
   DIFFICULTY,
-  BASE_SPEEDS,
-} from '../../constants/constants'
+  BASE_SPEEDS
+} from '@/constants/constants'
 
-interface Cell {
-  value: number
-  color: string | null
-  colorId: number | null
-}
+export default {
+  name: 'TetrisPage',
+  components: {
+    InfoPanel,
+    Controls
+  },
+  data () {
+    return {
+      board: [],
+      currentPiece: null,
+      nextPiece: null,
+      currentX: 0,
+      currentY: 0,
+      linesCleared: 0,
+      gameStatus: GAME_STATUS.IDLE,
+      difficulty: DIFFICULTY.MEDIUM,
+      gameInterval: null,
+      GAME_STATUS,
+      DIFFICULTY,
+      GHOST_VALUE,
+      GHOST_BACKGROUND,
+      ERROR_COLOR,
+      BASE_SPEEDS
+    }
+  },
+  computed: {
+    ...mapGetters('shapes', {
+      allShapes: 'getAllShapes'
+    }),
 
-interface Piece {
-  shape: number[][]
-  color: string
-  colorId: number
-  id?: string
-}
-
-const store = useStore()
-const allShapes = computed(() => store.getters['shapes/getAllShapes'])
-
-const board = ref<Cell[][]>([])
-const currentPiece = ref<Piece | null>(null)
-const nextPiece = ref<Piece | null>(null)
-const currentX = ref(0)
-const currentY = ref(0)
-const linesCleared = ref(0)
-const gameStatus = ref<string>(GAME_STATUS.IDLE)
-const difficulty = ref<string>(DIFFICULTY.MEDIUM)
-let gameInterval: ReturnType<typeof setInterval> | null = null
-
-const createPiece = (shapeData: { shape: number[][], color: string, id?: string }): Piece => ({
-  shape: shapeData.shape.map((row) => [...row]),
-  color: shapeData.color,
-  colorId: shapeData.id ? parseInt(shapeData.id.replace(/\D/g, '')) || Math.floor(Math.random() * 1000000) : Math.floor(Math.random() * 1000000),
-  id: shapeData.id
-})
-
-const getRandomPiece = (): Piece => {
-  const shapes = allShapes.value
-  const randomIndex = Math.floor(Math.random() * shapes.length)
-  return createPiece(shapes[randomIndex])
-}
-
-const collision = (shape: number[][], offsetX: number, offsetY: number): boolean => {
-  return shape.some((row, y) =>
-    row.some((cell, x) => {
-      if (cell === 0) {
-        return false
+    actions () {
+      return {
+        movePieceLeft: () => this.movePieceLeft(),
+        movePieceRight: () => this.movePieceRight(),
+        rotateCurrentPiece: () => this.rotateCurrentPiece(),
+        hardDropPiece: () => this.hardDropPiece(),
+        toggleGamePause: () => this.toggleGamePause(),
+        resetGame: () => this.resetGame()
       }
-      const boardX = offsetX + x
-      const boardY = offsetY + y
-      if (boardX < 0 || boardX >= BOARD_WIDTH || boardY >= BOARD_HEIGHT) {
-        return true
-      }
-      if (boardY >= 0 && board.value[boardY]?.[boardX]?.value !== 0) {
-        return true
-      }
-      return false
-    })
-  )
-}
+    },
 
-const actions = {
-  initBoard: () => {
-    board.value = Array(BOARD_HEIGHT)
-      .fill(0)
-      .map(() =>
-        Array(BOARD_WIDTH)
+    ghostY () {
+      if (!this.currentPiece || this.gameStatus !== GAME_STATUS.PLAYING) {
+        return this.currentY
+      }
+      let y = this.currentY
+      while (!this.collision(this.currentPiece.shape, this.currentX, y + 1)) {
+        y++
+      }
+      return y
+    },
+
+    displayBoard () {
+      const display = this.board.map(row => row.map(
+        cell => (cell.value > 0 ? cell.value : 0)
+      ))
+
+      if (this.currentPiece && this.gameStatus === GAME_STATUS.PLAYING) {
+        const piece = this.currentPiece
+        const ghostYVal = this.ghostY
+        const curX = this.currentX
+        const curY = this.currentY
+
+        piece.shape.forEach((row, y) => {
+          row.forEach((cell, x) => {
+            if (cell > 0) {
+              const boardY = ghostYVal + y
+              const boardX = curX + x
+              if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
+                if (display[boardY][boardX] === 0) {
+                  display[boardY][boardX] = GHOST_VALUE
+                }
+              }
+            }
+          })
+        })
+
+        piece.shape.forEach((row, y) => {
+          row.forEach((cell, x) => {
+            if (cell > 0) {
+              const boardY = curY + y
+              const boardX = curX + x
+              if (boardY >= 0 
+                && boardY < BOARD_HEIGHT 
+                && boardX >= 0 
+                && boardX < BOARD_WIDTH) {
+                display[boardY][boardX] = piece.colorId
+              }
+            }
+          })
+        })
+      }
+
+      return display
+    },
+
+    nextPieceBoard () {
+      if (!this.nextPiece) {
+        return Array(NEXT_PIECE_SIZE)
           .fill(0)
-          .map(
-            (): Cell => ({
+          .map(() => Array(NEXT_PIECE_SIZE).fill(0))
+      }
+
+      const result = Array(NEXT_PIECE_SIZE)
+        .fill(0)
+        .map(() => Array(NEXT_PIECE_SIZE).fill(0))
+
+      this.nextPiece.shape.forEach((row, y) => {
+        row.forEach((cell, x) => {
+          if (cell > 0) {
+            result[y][x] = this.nextPiece.colorId
+          }
+        })
+      })
+
+      return result
+    },
+    
+    baseInterval () {
+      return BASE_SPEEDS[this.difficulty]
+    },
+
+    currentInterval () {
+      const factor = 1 + this.linesCleared * 0.01
+      return Math.max(this.baseInterval / factor, 50)
+    }
+  },
+  methods: {
+    extractNumber (id) {
+      if (!id) {
+        return null
+      }
+      const num = parseInt(id.replace(/\D/g, ''))
+      return isNaN(num) ? null : num
+    },
+
+    createPiece (shapeData) {
+      return {
+        shape: shapeData.shape.map(row => [...row]),
+        color: shapeData.color,
+        colorId: this.extractNumber(shapeData.id) ?? Math.floor(Math.random() * 1000000),
+        id: shapeData.id
+      }
+    },
+
+    getRandomPiece () {
+      const shapes = this.allShapes
+      const randomIndex = Math.floor(Math.random() * shapes.length)
+      return this.createPiece(shapes[randomIndex])
+    },
+
+    collision (shape, offsetX, offsetY) {
+      return shape.some((row, y) =>
+        row.some((cell, x) => {
+          if (cell === 0) {
+            return false
+          }
+          const boardX = offsetX + x
+          const boardY = offsetY + y
+          if (boardX < 0 
+          || boardX >= BOARD_WIDTH 
+          || boardY >= BOARD_HEIGHT) {
+            return true
+          }
+          if (boardY >= 0 
+          && this.board[boardY]?.[boardX]?.value !== 0) {
+            return true
+          }
+          return false
+        })
+      )
+    },
+
+    initBoard () {
+      this.board = Array(BOARD_HEIGHT)
+        .fill(0)
+        .map(() =>
+          Array(BOARD_WIDTH)
+            .fill(0)
+            .map(() => ({
               value: 0,
               color: null,
-              colorId: null,
-            })
-          )
-      )
-  },
-
-  setNextPiece: (piece: Piece | null) => {
-    nextPiece.value = piece
-  },
-
-  setCurrentPiece: (piece: Piece | null) => {
-    currentPiece.value = piece
-  },
-
-  setCurrentPosition: (x: number, y: number) => {
-    currentX.value = x
-    currentY.value = y
-  },
-
-  setGameStatus: (status: string) => {
-    gameStatus.value = status
-  },
-
-  addLines: (lines: number) => {
-    linesCleared.value += lines
-    startGameLoop()
-  },
-
-  resetLines: () => {
-    linesCleared.value = 0
-  },
-
-  mergePieceToBoard: () => {
-    if (!currentPiece.value) {
-      return
-    }
-    const piece = currentPiece.value
-    const posX = currentX.value
-    const posY = currentY.value
-    piece.shape.forEach((row, y) => {
-      row.forEach((cell, x) => {
-        if (cell !== 0) {
-          const boardY = posY + y
-          const boardX = posX + x
-          if (boardY >= 0
-            && boardY < BOARD_HEIGHT
-            && boardX >= 0
-            && boardX < BOARD_WIDTH
-            && board.value[boardY][boardX].value === 0) {
-            board.value[boardY][boardX] = {
-              value: piece.colorId,
-              color: piece.color,
-              colorId: piece.colorId,
-            }
-          }
-        }
-      })
-    })
-  },
-
-  removeFullLines: () => {
-    let linesRemoved = 0
-    let y = BOARD_HEIGHT - 1
-    while (y >= 0) {
-      if (board.value[y].every(cell => cell.value !== 0)) {
-        board.value.splice(y, 1)
-        board.value.unshift(
-          Array(BOARD_WIDTH).fill(0).map(() => ({
-            value: 0, color: null, colorId: null
-          }))
+              colorId: null
+            }))
         )
-        linesRemoved++
-      } else {
-        y--
+    },
+
+    setNextPiece (piece) {
+      this.nextPiece = piece
+    },
+
+    setCurrentPiece (piece) {
+      this.currentPiece = piece
+    },
+
+    setCurrentPosition (x, y) {
+      this.currentX = x
+      this.currentY = y
+    },
+
+    setGameStatus (status) {
+      this.gameStatus = status
+    },
+
+    addLines (lines) {
+      this.linesCleared += lines
+      this.startGameLoop()
+    },
+
+    resetLines () {
+      this.linesCleared = 0
+    },
+
+    mergePieceToBoard () {
+      if (!this.currentPiece) {
+        return
       }
-    }
-    if (linesRemoved > 0) {
-      actions.addLines(linesRemoved)
-    }
-  },
-
-  spawnNewPiece: () => {
-    if (!nextPiece.value) {
-      actions.setNextPiece(getRandomPiece())
-    }
-
-    actions.setCurrentPiece(JSON.parse(JSON.stringify(nextPiece.value)))
-    actions.setNextPiece(getRandomPiece())
-
-    const newX = Math.floor((BOARD_WIDTH - (currentPiece.value?.shape[0].length || 0)) / 2)
-    actions.setCurrentPosition(newX, 0)
-
-    if (currentPiece.value
-      && collision(currentPiece.value.shape, currentX.value, currentY.value)) {
-      actions.setGameStatus(GAME_STATUS.GAME_OVER)
-      if (gameInterval) {
-        clearInterval(gameInterval)
-        gameInterval = null
-      }
-    }
-  },
-
-  initGame: () => {
-    actions.initBoard()
-    actions.setNextPiece(getRandomPiece())
-    actions.spawnNewPiece()
-    actions.resetLines()
-    actions.setGameStatus(GAME_STATUS.IDLE)
-  },
-
-  movePieceLeft: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) {
-      return
-    }
-    if (!collision(currentPiece.value.shape, currentX.value - 1, currentY.value)) {
-      actions.setCurrentPosition(currentX.value - 1, currentY.value)
-    }
-  },
-
-  movePieceRight: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) {
-      return
-    }
-    if (!collision(currentPiece.value.shape, currentX.value + 1, currentY.value)) {
-      actions.setCurrentPosition(currentX.value + 1, currentY.value)
-    }
-  },
-
-  rotateCurrentPiece: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) {
-      return
-    }
-
-    const rotated = currentPiece.value.shape[0].map((_, index) =>
-      currentPiece.value!.shape.map((row) => row[index]).reverse()
-    )
-
-    if (!collision(rotated, currentX.value, currentY.value)) {
-      actions.setCurrentPiece({
-        ...currentPiece.value,
-        shape: rotated,
-      })
-    } else {
-      if (!collision(rotated, currentX.value - 1, currentY.value)) {
-        actions.setCurrentPiece({
-          ...currentPiece.value,
-          shape: rotated,
-        })
-        actions.setCurrentPosition(currentX.value - 1, currentY.value)
-      } else if (!collision(rotated, currentX.value + 1, currentY.value)) {
-        actions.setCurrentPiece({
-          ...currentPiece.value,
-          shape: rotated,
-        })
-        actions.setCurrentPosition(currentX.value + 1, currentY.value)
-      }
-    }
-  },
-
-  movePieceDown: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) {
-      return
-    }
-
-    if (!collision(currentPiece.value.shape, currentX.value, currentY.value + 1)) {
-      actions.setCurrentPosition(currentX.value, currentY.value + 1)
-    } else {
-      actions.mergePieceToBoard()
-      actions.removeFullLines()
-      actions.spawnNewPiece()
-    }
-  },
-
-  hardDropPiece: () => {
-    if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) {
-      return
-    }
-
-    let y = currentY.value
-    while (!collision(currentPiece.value.shape, currentX.value, y + 1)) {
-      y++
-    }
-    actions.setCurrentPosition(currentX.value, y)
-    actions.mergePieceToBoard()
-    actions.removeFullLines()
-    actions.spawnNewPiece()
-  },
-
-  toggleGamePause: () => {
-    if (gameStatus.value === GAME_STATUS.PLAYING) {
-      actions.setGameStatus(GAME_STATUS.PAUSED)
-      if (gameInterval) {
-        clearInterval(gameInterval)
-        gameInterval = null
-      }
-    } else if (gameStatus.value === GAME_STATUS.PAUSED) {
-      actions.setGameStatus(GAME_STATUS.PLAYING)
-      startGameLoop()
-    } else if (gameStatus.value === GAME_STATUS.IDLE) {
-      actions.setGameStatus(GAME_STATUS.PLAYING)
-      startGameLoop()
-    } else if (gameStatus.value === GAME_STATUS.GAME_OVER) {
-      actions.initGame()
-      actions.setGameStatus(GAME_STATUS.PLAYING)
-      startGameLoop()
-    }
-  },
-
-  changeDifficulty: (newDifficulty: string) => {
-    difficulty.value = newDifficulty
-    startGameLoop()
-  },
-
-  resetGame: () => {
-    if (gameInterval) {
-      clearInterval(gameInterval)
-      gameInterval = null
-    }
-    actions.initGame()
-  },
-}
-
-const ghostY = computed(() => {
-  if (!currentPiece.value || gameStatus.value !== GAME_STATUS.PLAYING) {
-    return currentY.value
-  }
-  let y = currentY.value
-  while (!collision(currentPiece.value.shape, currentX.value, y + 1)) {
-    y++
-  }
-  return y
-})
-
-const displayBoard = computed(() => {
-  const display = board.value.map(row => row.map(cell => (cell.value > 0 ? cell.value : 0)))
-
-  if (currentPiece.value && gameStatus.value === GAME_STATUS.PLAYING) {
-    const piece = currentPiece.value
-    const ghostYVal = ghostY.value
-    const curX = currentX.value
-    const curY = currentY.value
-
-    piece.shape.forEach((row, y) => {
-      row.forEach((cell, x) => {
-        if (cell > 0) {
-          const boardY = ghostYVal + y
-          const boardX = curX + x
-          if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
-            if (display[boardY][boardX] === 0) {
-              display[boardY][boardX] = GHOST_VALUE
+      const piece = this.currentPiece
+      const posX = this.currentX
+      const posY = this.currentY
+      piece.shape.forEach((row, y) => {
+        row.forEach((cell, x) => {
+          if (cell !== 0) {
+            const boardY = posY + y
+            const boardX = posX + x
+            if (
+              boardY >= 0 &&
+              boardY < BOARD_HEIGHT &&
+              boardX >= 0 &&
+              boardX < BOARD_WIDTH &&
+              this.board[boardY][boardX].value === 0
+            ) {
+              this.board[boardY][boardX] = {
+                value: piece.colorId,
+                color: piece.color,
+                colorId: piece.colorId
+              }
             }
           }
-        }
+        })
       })
-    })
+    },
 
-    piece.shape.forEach((row, y) => {
-      row.forEach((cell, x) => {
-        if (cell > 0) {
-          const boardY = curY + y
-          const boardX = curX + x
-          if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
-            display[boardY][boardX] = piece.colorId
-          }
+    removeFullLines () {
+      let linesRemoved = 0
+      let y = BOARD_HEIGHT - 1
+      while (y >= 0) {
+        if (this.board[y].every(cell => cell.value !== 0)) {
+          this.board.splice(y, 1)
+          this.board.unshift(
+            Array(BOARD_WIDTH)
+              .fill(0)
+              .map(() => ({ value: 0, color: null, colorId: null }))
+          )
+          linesRemoved++
+        } else {
+          y--
         }
-      })
-    })
-  }
-
-  return display
-})
-
-const nextPieceBoard = computed(() => {
-  if (!nextPiece.value) {
-    return Array(NEXT_PIECE_SIZE)
-      .fill(0)
-      .map(() => Array(NEXT_PIECE_SIZE).fill(0))
-  }
-
-  const result = Array(NEXT_PIECE_SIZE)
-    .fill(0)
-    .map(() => Array(NEXT_PIECE_SIZE).fill(0))
-
-  nextPiece.value.shape.forEach((row, y) => {
-    row.forEach((cell, x) => {
-      if (cell > 0) {
-        result[y][x] = nextPiece.value!.colorId
       }
-    })
-  })
+      if (linesRemoved > 0) {
+        this.addLines(linesRemoved)
+      }
+    },
 
-  return result
-})
+    spawnNewPiece () {
+      if (!this.nextPiece) {
+        this.setNextPiece(this.getRandomPiece())
+      }
 
-const baseInterval = computed(() => BASE_SPEEDS[difficulty.value])
-const currentInterval = computed(() => {
-  const factor = 1 + linesCleared.value * 0.01
+      this.setCurrentPiece(JSON.parse(JSON.stringify(this.nextPiece)))
+      this.setNextPiece(this.getRandomPiece())
 
-  return Math.max(baseInterval.value / factor, 50) //no faster than 50ms
-})
+      const newX = Math.floor((BOARD_WIDTH - (this.currentPiece?.shape[0].length || 0)) / 2)
+      this.setCurrentPosition(newX, 0)
 
-const getCellColor = (colorId: number) => {
-  if (colorId === GHOST_VALUE) {
-    return { backgroundColor: GHOST_BACKGROUND }
-  }
+      if (this.currentPiece
+        && this.collision(this.currentPiece.shape, this.currentX, this.currentY)) {
+        this.setGameStatus(GAME_STATUS.GAME_OVER)
+        if (this.gameInterval) {
+          clearInterval(this.gameInterval)
+          this.gameInterval = null
+        }
+      }
+    },
 
-  const cell = board.value.flat().find(c => c.colorId === colorId)
-  if (cell) return { backgroundColor: cell.color }
+    initGame () {
+      this.initBoard()
+      this.setNextPiece(this.getRandomPiece())
+      this.spawnNewPiece()
+      this.resetLines()
+      this.setGameStatus(GAME_STATUS.IDLE)
+    },
 
-  if (currentPiece.value?.colorId === colorId) {
-    return { backgroundColor: currentPiece.value.color }
-  }
-  if (nextPiece.value?.colorId === colorId) {
-    return { backgroundColor: nextPiece.value.color }
-  }
+    movePieceLeft () {
+      if (!this.currentPiece || this.gameStatus !== GAME_STATUS.PLAYING) {
+        return
+      }
+      if (!this.collision(this.currentPiece.shape, this.currentX - 1, this.currentY)) {
+        this.setCurrentPosition(this.currentX - 1, this.currentY)
+      }
+    },
 
-  return { backgroundColor: ERROR_COLOR }
-}
+    movePieceRight () {
+      if (!this.currentPiece || this.gameStatus !== GAME_STATUS.PLAYING) return
+      if (!this.collision(this.currentPiece.shape, this.currentX + 1, this.currentY)) {
+        this.setCurrentPosition(this.currentX + 1, this.currentY)
+      }
+    },
 
-const startGameLoop = () => {
-  if (gameInterval) {
-    clearInterval(gameInterval)
-  }
+    rotateCurrentPiece () {
+      if (!this.currentPiece || this.gameStatus !== GAME_STATUS.PLAYING) {
+        return
+      }
 
-  gameInterval = setInterval(() => {
-    if (gameStatus.value === GAME_STATUS.PLAYING) {
-      actions.movePieceDown()
+      const rotated = this.currentPiece.shape[0].map((_, index) =>
+        this.currentPiece.shape.map(row => row[index]).reverse()
+      )
+
+      if (!this.collision(rotated, this.currentX, this.currentY)) {
+        this.setCurrentPiece({
+          ...this.currentPiece,
+          shape: rotated
+        })
+      } else {
+        if (!this.collision(rotated, this.currentX - 1, this.currentY)) {
+          this.setCurrentPiece({
+            ...this.currentPiece,
+            shape: rotated
+          })
+          this.setCurrentPosition(this.currentX - 1, this.currentY)
+        } else if (!this.collision(rotated, this.currentX + 1, this.currentY)) {
+          this.setCurrentPiece({
+            ...this.currentPiece,
+            shape: rotated
+          })
+          this.setCurrentPosition(this.currentX + 1, this.currentY)
+        }
+      }
+    },
+
+    movePieceDown () {
+      if (!this.currentPiece || this.gameStatus !== GAME_STATUS.PLAYING) {
+        return
+      }
+
+      if (!this.collision(this.currentPiece.shape, this.currentX, this.currentY + 1)) {
+        this.setCurrentPosition(this.currentX, this.currentY + 1)
+      } else {
+        this.mergePieceToBoard()
+        this.removeFullLines()
+        this.spawnNewPiece()
+      }
+    },
+
+    hardDropPiece () {
+      if (!this.currentPiece || this.gameStatus !== GAME_STATUS.PLAYING) {
+        return
+      }
+
+      let y = this.currentY
+      while (!this.collision(this.currentPiece.shape, this.currentX, y + 1)) {
+        y++
+      }
+      this.setCurrentPosition(this.currentX, y)
+      this.mergePieceToBoard()
+      this.removeFullLines()
+      this.spawnNewPiece()
+    },
+
+    toggleGamePause () {
+      if (this.gameStatus === GAME_STATUS.PLAYING) {
+        this.setGameStatus(GAME_STATUS.PAUSED)
+        if (this.gameInterval) {
+          clearInterval(this.gameInterval)
+          this.gameInterval = null
+        }
+      } else if (this.gameStatus === GAME_STATUS.PAUSED) {
+        this.setGameStatus(GAME_STATUS.PLAYING)
+        this.startGameLoop()
+      } else if (this.gameStatus === GAME_STATUS.IDLE) {
+        this.setGameStatus(GAME_STATUS.PLAYING)
+        this.startGameLoop()
+      } else if (this.gameStatus === GAME_STATUS.GAME_OVER) {
+        this.initGame()
+        this.setGameStatus(GAME_STATUS.PLAYING)
+        this.startGameLoop()
+      }
+    },
+
+    changeDifficulty (newDifficulty) {
+      this.difficulty = newDifficulty
+      this.startGameLoop()
+    },
+
+    resetGame () {
+      if (this.gameInterval) {
+        clearInterval(this.gameInterval)
+        this.gameInterval = null
+      }
+      this.initGame()
+    },
+
+    startGameLoop () {
+      if (this.gameInterval) {
+        clearInterval(this.gameInterval)
+      }
+
+      this.gameInterval = setInterval(() => {
+        if (this.gameStatus === GAME_STATUS.PLAYING) {
+          this.movePieceDown()
+        }
+      }, this.currentInterval)
+    },
+
+    getCellColor (colorId) {
+      if (colorId === GHOST_VALUE) {
+        return { backgroundColor: GHOST_BACKGROUND }
+      }
+
+      const cell = this.board.flat().find(c => c.colorId === colorId)
+      if (cell) {
+        return { backgroundColor: cell.color }
+      }
+
+      if (this.currentPiece?.colorId === colorId) {
+        return { backgroundColor: this.currentPiece.color }
+      }
+      if (this.nextPiece?.colorId === colorId) {
+        return { backgroundColor: this.nextPiece.color }
+      }
+
+      return { backgroundColor: ERROR_COLOR }
     }
-  }, currentInterval.value)
-}
-
-onMounted(() => {
-  actions.initGame()
-})
-
-onUnmounted(() => {
-  if (gameInterval) {
-    clearInterval(gameInterval)
+  },
+  mounted () {
+    this.initGame()
+  },
+  beforeUnmount () {
+    if (this.gameInterval) {
+      clearInterval(this.gameInterval)
+      this.gameInterval = null
+    }
   }
-})
+}
 </script>
 
 <style scoped lang="scss">

@@ -1,5 +1,11 @@
 import { BASE_PIECES } from '../constants/constants'
 
+const MUTATIONS = {
+  ADD_SHAPE: 'ADD_SHAPE',
+  UPDATE_SHAPE: 'UPDATE_SHAPE',
+  DELETE_SHAPE: 'DELETE_SHAPE'
+}
+
 export default {
   namespaced: true,
   state() {
@@ -16,10 +22,10 @@ export default {
     }
   },
   mutations: {
-    ADD_SHAPE: (state, shape) => {
+    [MUTATIONS.ADD_SHAPE]: (state, shape) => {
       state.customShapes.push(shape)
     },
-    UPDATE_SHAPE: (state, { id, ...updates }) => {
+    [MUTATIONS.UPDATE_SHAPE]: (state, { id, ...updates }) => {
       const index = state.customShapes.findIndex(s => s.id === id)
       if (index !== -1) {
         state.customShapes[index] = { ...state.customShapes[index], ...updates }
@@ -30,19 +36,19 @@ export default {
         }
       }
     },
-    DELETE_SHAPE: (state, id) => {
+    [MUTATIONS.DELETE_SHAPE]: (state, id) => {
       state.customShapes = state.customShapes.filter(s => s.id !== id)
     }
   },
   actions: {
     addShape: ({ commit }, shape) => {
-      commit('ADD_SHAPE', shape)
+      commit(MUTATIONS.ADD_SHAPE, shape)
     },
     updateShape: ({ commit }, shape) => {
-      commit('UPDATE_SHAPE', shape)
+      commit(MUTATIONS.UPDATE_SHAPE, shape)
     },
     deleteShape: ({ commit }, id) => {
-      commit('DELETE_SHAPE', id)
+      commit(MUTATIONS.DELETE_SHAPE, id)
     }
   }
 }

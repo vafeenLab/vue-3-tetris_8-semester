@@ -1,231 +1,229 @@
 <template>
-    <div class="shape-editor">
-        <h2 class="shape-editor__title">Редактор фигур</h2>
-        <div class="shape-editor__list">
-            <select
-                class="shape-editor__select"
-                :value="selectedId"
-                @change="(e) => handleSelectChange(e)"
-            >
-                <option
-                    v-for="shape in allShapes"
-                    :key="shape.id"
-                    :value="shape.id"
-                >
-                    {{ shape.name }} {{ shape.id.startsWith('base-') ? '(базовая)' : '' }}
-                </option>
-            </select>
-
-            <button
-                class="shape-editor__btn shape-editor__btn--new"
-                @click="() => handleNew()"
-            >
-                Новая
-            </button>
-            <button
-                class="shape-editor__btn shape-editor__btn--delete"
-                :disabled="!selectedId || selectedId.startsWith('base-')"
-                @click="() => handleDelete()"
-            >
-                Удалить
-            </button>
-        </div>
-
-        <div class="shape-editor__grid">
-            <div class="shape-editor__grid-container">
-              <div
-                  v-for="(row, y) in grid"
-                  :key="y"
-                  class="shape-editor__grid-row"
-              >
-                  <div
-                      v-for="(cell, x) in row"
-                      :key="x"
-                      class="shape-editor__grid-cell"
-                      :class="{ 'shape-editor__grid-cell_filled': cell === 1 }"
-                      :style="cell === 1 ? { backgroundColor: currentColor } : {}"
-                      @click="() => toggleCell(y, x)"
-                  ></div>
-              </div>
-            </div>
-
-            <div class="shape-editor__params">
-                <label class="shape-editor__label">
-                    Название:
-                    <input
-                        v-model="currentName"
-                        type="text"
-                        class="shape-editor__input"
-                    />
-                </label>
-
-                <label class="shape-editor__label">
-                    Цвет:
-                    <input
-                        v-model="currentColor"
-                        type="color"
-                        class="shape-editor__color"
-                    />
-                </label>
-            </div>
-
-            <div class="shape-editor__actions">
-                <button
-                    class="shape-editor__btn shape-editor__btn--save-new"
-                    @click="() => handleSaveNew()"
-                >
-                    Сохранить как новую
-                </button>
-
-                <button
-                    class="shape-editor__btn shape-editor__btn--update"
-                    :disabled="!selectedId"
-                    @click="() => handleUpdate()"
-                >
-                    Обновить
-                </button>
-            </div>
-      </div>
-
-      <div class="shape-editor__footer">
-        <RouterLink 
-          :to="{ name: $routes.TETRIS }" 
-          class="shape-editor__back-btn"
+  <div class="shape-editor">
+    <h2 class="shape-editor__title">Редактор фигур</h2>
+    <div class="shape-editor__list">
+      <select
+        class="shape-editor__select"
+        :value="selectedId"
+        @change="(e) => handleSelectChange(e)"
+      >
+        <option
+          v-for="shape in allShapes"
+          :key="shape.id"
+          :value="shape.id"
         >
-          ← Вернуться в тетрис
-        </RouterLink>
+          {{ shape.name }} {{ shape.id.startsWith('base-') ? '(базовая)' : '' }}
+        </option>
+      </select>
+
+      <button
+        class="shape-editor__btn shape-editor__btn--new"
+        @click="() => handleNew()"
+      >
+        Новая
+      </button>
+      <button
+        class="shape-editor__btn shape-editor__btn--delete"
+        :disabled="!selectedId || selectedId.startsWith('base-')"
+        @click="() => handleDelete()"
+      >
+        Удалить
+      </button>
+    </div>
+
+    <div class="shape-editor__grid">
+      <div class="shape-editor__grid-container">
+        <div
+          v-for="(row, y) in grid"
+          :key="y"
+          class="shape-editor__grid-row"
+        >
+          <div
+            v-for="(cell, x) in row"
+            :key="x"
+            class="shape-editor__grid-cell"
+            :class="{ 'shape-editor__grid-cell_filled': cell === 1 }"
+            :style="cell === 1 ? { backgroundColor: currentColor } : {}"
+            @click="() => toggleCell(y, x)"
+          ></div>
+        </div>
       </div>
+
+      <div class="shape-editor__params">
+        <label class="shape-editor__label">
+          Название:
+          <input
+            v-model="currentName"
+            type="text"
+            class="shape-editor__input"
+          />
+        </label>
+        <label class="shape-editor__label">
+          Цвет:
+          <input
+            v-model="currentColor"
+            type="color"
+            class="shape-editor__color"
+          />
+        </label>
+      </div>
+
+      <div class="shape-editor__actions">
+        <button
+          class="shape-editor__btn shape-editor__btn--save-new"
+          @click="() => handleSaveNew()"
+        >
+          Сохранить как новую
+        </button>
+
+        <button
+          class="shape-editor__btn shape-editor__btn--update"
+          :disabled="!selectedId"
+          @click="() => handleUpdate()"
+        >
+          Обновить
+        </button>
+      </div>
+    </div>
+
+    <div class="shape-editor__footer">
+      <RouterLink 
+        :to="{ name: $routes.TETRIS }" 
+        class="shape-editor__back-btn"
+      >
+        ← Вернуться в тетрис
+      </RouterLink>
+    </div>
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useStore } from 'vuex'
+<script>
+import { mapActions, mapGetters } from 'vuex';
 
-const store = useStore()
+export default {
+  name: 'ShapeEditor',
+  data () {
+    return {
+      selectedId: 'base-1',
+      grid: [],
+      currentName: '',
+      currentColor: '#0000FF'
+    }
+  },
+  computed: {
+    ...mapGetters('shapes', {
+      allShapes: 'getAllShapes',
+      getShapeById: 'getShapeById'
+    })
+  },
+  methods: {
+    ...mapActions('shapes', [
+      'addShape',
+      'updateShape',
+      'deleteShape'
+    ]),
+    loadShape(id) {
+      if (!id) {
+        return
+      }
 
-const allShapes = computed(() => store.getters['shapes/getAllShapes'] || [])
+      const shape = this.getShapeById(id)
+      if (!shape) {
+        return
+      }
+      
+      this.currentName = shape.name || ''
+      this.currentColor = shape.color || '#0000FF'
 
-const selectedId = ref('base-1')
-const grid = ref([])
-const currentName = ref('')
-const currentColor = ref('#00FFFF')
+      const size = 4
+      const newGrid = Array(size).fill(0).map(() => Array(size).fill(0))
 
-const getShapeById = (id) => {
-  const getter = store.getters['shapes/getShapeById']
-  return getter ? getter(id) : null
-}
+      if (shape.shape && Array.isArray(shape.shape)) {
+        shape.shape.forEach((row, y) => {
+          if (Array.isArray(row)) {
+            row.forEach((cell, x) => {
+              if (y < size && x < size) {
+                newGrid[y][x] = cell
+              }
+            })
+          }
+        })
+      }
 
-const loadShape = (id) => {
-  if (!id) return
-  
-  const shape = getShapeById(id)
-  if (shape) {
-    currentName.value = shape.name || ''
-    currentColor.value = shape.color || '#00FFFF'
-    
-    const size = 4
-    const newGrid = Array(size).fill(0).map(() => Array(size).fill(0))
-    
-    if (shape.shape && Array.isArray(shape.shape)) {
-      shape.shape.forEach((row, y) => {
-        if (Array.isArray(row)) {
-          row.forEach((cell, x) => {
-            if (y < size && x < size) {
-              newGrid[y][x] = cell
-            }
-          })
-        }
+      this.grid = newGrid
+    },
+    handleSelectChange(e) {
+      this.selectedId = e.target.value
+      this.loadShape(this.selectedId)
+    },
+    toggleCell(y, x) {
+      const newGrid = this.grid.map(row => [...row])
+      newGrid[y][x] = newGrid[y][x] ? 0 : 1
+      this.grid = newGrid
+    },
+    handleNew() {
+      this.selectedId = null
+      this.currentName = ''
+      this.currentColor = '#000000'
+      this.grid = Array(4).fill(0).map(() => Array(4).fill(0))
+    },
+    handleDelete() {
+      if (!this.selectedId || this.selectedId.startsWith('base-')) {
+        return
+      }
+      this.deleteShape(this.selectedId)
+      this.selectedId = 'base-1'
+      this.loadShape('base-1')
+    },
+    getCleanShape() {
+      if (!this.grid || !this.grid.length) {
+        return [[1]]
+      }
+      let shape = this.grid.filter(row => row.some(cell => cell === 1))
+      if (shape.length === 0) {
+        return [[1]]
+      }
+      const cols = shape[0].length
+      let minCol = cols
+      let maxCol = 0
+      shape.forEach(row => {
+        row.forEach((cell, x) => {
+          if (cell === 1) {
+            minCol = Math.min(minCol, x)
+            maxCol = Math.max(maxCol, x)
+          }
+        })
+      })
+      if (maxCol >= minCol) {
+        shape = shape.map(row => row.slice(minCol, maxCol + 1))
+      }
+      return shape
+    },
+    handleSaveNew() {
+      const newShape = {
+        id: 'custom-' + Date.now(),
+        name: this.currentName || 'Новая фигура',
+        color: this.currentColor,
+        shape: this.getCleanShape()
+      }
+      this.addShape(newShape)
+      this.selectedId = newShape.id
+    },
+    handleUpdate() {
+      if (!this.selectedId) {
+        return
+      }
+      this.updateShape({
+        id: this.selectedId,
+        name: this.currentName,
+        color: this.currentColor,
+        shape: this.getCleanShape()
       })
     }
-    grid.value = newGrid
+  },
+  mounted () {
+    this.loadShape(this.selectedId)
   }
-}
-
-onMounted(() => {
-  loadShape(selectedId.value)
-})
-
-const handleSelectChange = (e) => {
-  selectedId.value = e.target.value
-  loadShape(selectedId.value)
-}
-
-const toggleCell = (y, x) => {
-  const newGrid = grid.value.map(row => [...row])
-  newGrid[y][x] = newGrid[y][x] ? 0 : 1
-  grid.value = newGrid
-}
-
-const handleNew = () => {
-  selectedId.value = null
-  currentName.value = ''
-  currentColor.value = '#000000'
-  grid.value = Array(4).fill(0).map(() => Array(4).fill(0))
-}
-
-const handleDelete = () => {
-  if (!selectedId.value || selectedId.value.startsWith('base-')) {
-    return
-  }
-
-  store.commit('shapes/DELETE_SHAPE', selectedId.value)
-  selectedId.value = 'base-1'
-  loadShape('base-1')
-}
-
-const getCleanShape = () => {
-  if (!grid.value || !grid.value.length) return [[1]]
-  
-  let shape = grid.value.filter(row => row.some(cell => cell === 1))
-  
-  if (shape.length === 0) {
-    return [[1]]
-  }
-  
-  const cols = shape[0].length
-  let minCol = cols
-  let maxCol = 0
-  
-  shape.forEach(row => {
-    row.forEach((cell, x) => {
-      if (cell === 1) {
-        minCol = Math.min(minCol, x)
-        maxCol = Math.max(maxCol, x)
-      }
-    })
-  })
-  
-  if (maxCol >= minCol) {
-    shape = shape.map(row => row.slice(minCol, maxCol + 1))
-  }
-  
-  return shape
-}
-
-const handleSaveNew = () => {
-  const newShape = {
-    id: 'custom-' + Date.now(),
-    name: currentName.value || 'Новая фигура',
-    color: currentColor.value,
-    shape: getCleanShape()
-  }
-  
-  store.commit('shapes/ADD_SHAPE', newShape)
-  selectedId.value = newShape.id
-}
-
-const handleUpdate = () => {
-  if (!selectedId.value) {
-    return
-  }
-  
-  store.commit('shapes/UPDATE_SHAPE', {
-    id: selectedId.value,
-    name: currentName.value,
-    color: currentColor.value,
-    shape: getCleanShape()
-  })
 }
 </script>
 
@@ -242,7 +240,6 @@ const handleUpdate = () => {
   &__title {
     text-align: center;
     margin: 0 0 24px 0;
-    font-size: 1.8rem;
     font-weight: 300;
     letter-spacing: 1px;
     color: #ffaa00;
@@ -256,7 +253,6 @@ const handleUpdate = () => {
   }
 
   &__select {
-    flex: 1;
     padding: 8px 12px;
     background-color: #2a2a2a;
     color: #ffffff;
@@ -274,7 +270,6 @@ const handleUpdate = () => {
     padding: 8px 16px;
     border: none;
     border-radius: 6px;
-    font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
@@ -350,10 +345,6 @@ const handleUpdate = () => {
     &:hover {
       background-color: #2a2a2a;
     }
-
-    &_filled {
-      background-color: currentColor;
-    }
   }
 
   &__params {
@@ -370,7 +361,6 @@ const handleUpdate = () => {
     align-items: center;
     gap: 8px;
     color: #cccccc;
-    font-size: 0.9rem;
   }
 
   &__input {
@@ -379,7 +369,6 @@ const handleUpdate = () => {
     border-radius: 4px;
     color: #ffffff;
     padding: 6px 10px;
-    font-size: 0.9rem;
 
     &:focus {
       outline: none;
@@ -417,7 +406,6 @@ const handleUpdate = () => {
     color: #ffffff;
     text-decoration: none;
     border-radius: 6px;
-    font-size: 1rem;
     transition: all 0.2s;
     border: 1px solid #666;
 

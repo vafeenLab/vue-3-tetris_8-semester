@@ -49,20 +49,26 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script>
 import { CONTROLS, GAME_STATUS } from '../../constants/constants'
 
-defineProps<{
-  gameStatus: string
-  actions: {
-    movePieceLeft: () => void
-    movePieceRight: () => void
-    rotateCurrentPiece: () => void
-    hardDropPiece: () => void
-    toggleGamePause: () => void
-    resetGame: () => void
+export default {
+  name: 'Controls',
+  data () {
+    return {
+      CONTROLS,
+      GAME_STATUS
+    }
+  },
+  props: {
+    gameStatus: {
+      type: String
+    },
+    actions: {
+      type: Object
+    }
   }
-}>()
+}
 </script>
 
 <style scoped lang="scss">

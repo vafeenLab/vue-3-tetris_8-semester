@@ -21,17 +21,16 @@
 
     <div class="info-panel__difficulty">
       <h3 class="info-panel__difficulty__header">Сложность</h3>
-      <div class="info-panel__difficulty__selector">
-        <select 
-        :disabled="gameStatus !== GAME_STATUS.IDLE && gameStatus !== GAME_STATUS.GAME_OVER"
-        :value="difficulty" 
-        @change="(e) => emitDifficultyChange(e)"
-        >
-          <option :value="DIFFICULTY.EASY">Легкая</option>
-          <option :value="DIFFICULTY.MEDIUM">Средняя</option>
-          <option :value="DIFFICULTY.HARD">Сложная</option>
-        </select>
-      </div>
+      <select
+        class="info-panel__difficulty__select"
+        :disabled="isSelectDisabled(gameStatus)"
+        :value="difficulty"
+        @change="(e) => onDifficultyChanged(e.target.value)"
+      >
+        <option :value="DIFFICULTY.EASY">Легкая</option>
+        <option :value="DIFFICULTY.MEDIUM">Средняя</option>
+        <option :value="DIFFICULTY.HARD">Сложная</option>
+      </select>
     </div>
 
     <div class="info-panel__lines">
@@ -56,22 +55,44 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { GAME_STATUS, DIFFICULTY} from '../../constants/constants'
+<script>
+import { GAME_STATUS, DIFFICULTY } from '@/constants/constants'
+export default {
+  name: 'InfoPanel',
+  data () {
+    return {
+      DIFFICULTY,
+      GAME_STATUS
+    }
+  },
+  props: {
+    nextPieceBoard: {
+      type: Array
+    },
+    linesCleared: {
+      type: Number
+    },
+    gameStatus: {
+      type: GAME_STATUS
+    },
+    getCellColor: {},
+    difficulty: {
+      type: DIFFICULTY
+    }
+  },
 
-const { onDifficultyChanged } = defineProps<{
-  nextPieceBoard: number[][]
-  linesCleared: number
-  gameStatus: string
-  getCellColor: (colorId: number) => { backgroundColor: string }
-  difficulty: string
-  onDifficultyChanged: (newDifficulty: string) => void
-}>()
+  emits: ['difficultyChanged'],
 
-const emitDifficultyChange = (e: Event) => {
-  const value = (e.target as HTMLSelectElement).value
+  methods: {
+    onDifficultyChanged (newDifficulty) {
+      this.$emit('difficultyChanged', newDifficulty)
+    },
 
-  return onDifficultyChanged?.(value)
+    isSelectDisabled (status) {
+      return status !== GAME_STATUS.IDLE
+          && status !== GAME_STATUS.GAME_OVER
+    }
+  }
 }
 </script>
 
@@ -116,15 +137,13 @@ const emitDifficultyChange = (e: Event) => {
       color: #ffffff;
     }
 
-    &__selector {
-      select {
-        appearance: none;
-        width: 100%;
-        background-color: #2a2a2a;
-        color: #ffffff;
-        cursor: pointer;
-        text-align: center;
-      }
+    &__select {
+      appearance: none;
+      width: 100%;
+      background-color: #2a2a2a;
+      color: #ffffff;
+      cursor: pointer;
+      text-align: center;
 
       justify-content: center;
 
