@@ -55,22 +55,44 @@
   </div>
 </template>
 
-<script setup>
-import { GAME_STATUS, DIFFICULTY} from '../../constants/constants'
+<script>
+import { GAME_STATUS, DIFFICULTY } from '@/constants/constants'
+export default {
+  name: 'InfoPanel',
+  data () {
+    return {
+      DIFFICULTY,
+      GAME_STATUS
+    }
+  },
+  props: {
+    nextPieceBoard: {
+      type: Array
+    },
+    linesCleared: {
+      type: Number
+    },
+    gameStatus: {
+      type: GAME_STATUS
+    },
+    getCellColor: {},
+    difficulty: {
+      type: DIFFICULTY
+    }
+  },
 
-const props = defineProps(
-  ['nextPieceBoard', 'linesCleared', 'gameStatus', 'getCellColor', 'difficulty']
-)
+  emits: ['difficultyChanged'],
 
-const emit = defineEmits(['difficultyChanged'])
+  methods: {
+    onDifficultyChanged (newDifficulty) {
+      this.$emit('difficultyChanged', newDifficulty)
+    },
 
-const onDifficultyChanged = (newDifficulty) => {
-  emit('difficultyChanged', newDifficulty)
-}
-
-const isSelectDisabled = (status) => {
-  return status !== GAME_STATUS.GAME_OVER 
-        && status !== GAME_STATUS.IDLE
+    isSelectDisabled (status) {
+      return status !== GAME_STATUS.IDLE
+          && status !== GAME_STATUS.GAME_OVER
+    }
+  }
 }
 </script>
 

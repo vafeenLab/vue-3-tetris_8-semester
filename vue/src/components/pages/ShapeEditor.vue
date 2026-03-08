@@ -97,136 +97,37 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useStore } from 'vuex'
+<script>
+import { mapActions, mapGetters } from 'vuex';
 
-const store = useStore()
-
-const allShapes = computed(() => store.getters['shapes/getAllShapes'] || [])
-
-const selectedId = ref('base-1')
-const grid = ref([])
-const currentName = ref('')
-const currentColor = ref('#00FFFF')
-
-const getShapeById = (id) => {
-  return store.getters['shapes/getShapeById'](id) || null
-}
-
-const loadShape = (id) => {
-  if (!id) return
-  const shape = getShapeById(id)
-
-  if (!shape) {
-    return
-  }
-
-  currentName.value = shape.name || ''
-  currentColor.value = shape.color || '#00FFFF'
-
-  const size = 4
-  const newGrid = Array(size).fill(0).map(() => Array(size).fill(0))
-    
-  if (shape.shape && Array.isArray(shape.shape)) {
-    shape.shape.forEach((row, y) => {
-      if (Array.isArray(row)) {
-        row.forEach((cell, x) => {
-          if (y < size && x < size) {
-            newGrid[y][x] = cell
-          }
-        })
-      }
+export default {
+  name: 'ShapeEditor',
+  data () {
+    return {
+      selectedId: 'base-1',
+      grid: [],
+      currentName: '',
+      currentColor: '#0000FF'
+    }
+  },
+  computed: {
+    ...mapGetters('shapes', {
+      allShapes: 'getAllShapes',
+      getShapeById: 'getShapeById'
     })
+  },
+  methods: {
+    ...mapActions('shapes', [
+      'addShape',
+      'updateShape',
+      'deleteShape'
+    ])
+    //other methods to be written...
+  },
+  mounted () {
+    this.loadShape(this.selectedId)
   }
-  grid.value = newGrid
 }
-
-const handleSelectChange = (e) => {
-  selectedId.value = e.target.value
-  loadShape(selectedId.value)
-}
-
-const toggleCell = (y, x) => {
-  const newGrid = grid.value.map(row => [...row])
-  newGrid[y][x] = newGrid[y][x] ? 0 : 1
-  grid.value = newGrid
-}
-
-const handleNew = () => {
-  selectedId.value = null
-  currentName.value = ''
-  currentColor.value = '#000000'
-  grid.value = Array(4).fill(0).map(() => Array(4).fill(0))
-}
-
-const handleDelete = () => {
-  if (!selectedId.value || selectedId.value.startsWith('base-')) {
-    return
-  }
-
-  store.dispatch('shapes/deleteShape', selectedId.value)
-  selectedId.value = 'base-1'
-  loadShape('base-1')
-}
-
-const getCleanShape = () => {
-  if (!grid.value || !grid.value.length) return [[1]]
-  
-  let shape = grid.value.filter(row => row.some(cell => cell === 1))
-  
-  if (shape.length === 0) {
-    return [[1]]
-  }
-  
-  const cols = shape[0].length
-  let minCol = cols
-  let maxCol = 0
-  
-  shape.forEach(row => {
-    row.forEach((cell, x) => {
-      if (cell === 1) {
-        minCol = Math.min(minCol, x)
-        maxCol = Math.max(maxCol, x)
-      }
-    })
-  })
-  
-  if (maxCol >= minCol) {
-    shape = shape.map(row => row.slice(minCol, maxCol + 1))
-  }
-  
-  return shape
-}
-
-const handleSaveNew = () => {
-  const newShape = {
-    id: 'custom-' + Date.now(),
-    name: currentName.value || 'Новая фигура',
-    color: currentColor.value,
-    shape: getCleanShape()
-  }
-  
-  store.dispatch('shapes/addShape',newShape)
-  selectedId.value = newShape.id
-}
-
-const handleUpdate = () => {
-  if (!selectedId.value) {
-    return
-  }
-  
-  store.dispatch('shapes/updateShape', {
-    id: selectedId.value,
-    name: currentName.value,
-    color: currentColor.value,
-    shape: getCleanShape()
-  })
-}
-
-onMounted(() => {
-  loadShape(selectedId.value)
-})
 </script>
 
 <style scoped lang="scss">
