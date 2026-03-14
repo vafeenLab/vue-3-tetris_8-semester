@@ -19,6 +19,40 @@
       </div>
     </div>
 
+    <div class="info-panel__board-size">
+      <h3 class="info-panel__heading">Размер поля</h3>
+      <div class="info-panel__board-size-options">
+        <label
+          v-for="(size, key) in BOARD_SIZES"
+          :key="key"
+          class="info-panel__board-size-option"
+          :class="{ 'info-panel__board-size-option_selected': boardSize === key }"
+        >
+          <input
+            type="radio"
+            name="boardSize"
+            :value="key"
+            :checked="boardSize === key"
+            :disabled="isSelectDisabled(gameStatus)"
+            @change="() => onBoardSizeChanged(key)"
+          >
+          {{ size.label }}
+        </label>
+      </div>
+    </div>
+
+    <div class="info-panel__hard-mode">
+      <label class="info-panel__hard-mode-label">
+        <input
+          type="checkbox"
+          :checked="hardModeEnabled"
+          :disabled="isSelectDisabled(gameStatus)"
+          @change="(e) => onHardModeToggle(e.target.checked)"
+        >
+        <span>Сложный режим<br>(стальные фигуры)</span>
+      </label>
+    </div>
+
     <div class="info-panel__difficulty">
       <h3 class="info-panel__difficulty__header">Сложность</h3>
       <select
@@ -56,38 +90,62 @@
 </template>
 
 <script>
-import { GAME_STATUS, DIFFICULTY } from '@/constants/constants'
+import { GAME_STATUS, DIFFICULTY, BOARD_SIZES } from '@/constants/constants'
+
 export default {
   name: 'InfoPanel',
   data () {
     return {
       DIFFICULTY,
-      GAME_STATUS
+      GAME_STATUS,
+      BOARD_SIZES
     }
   },
   props: {
     nextPieceBoard: {
-      type: Array
+      type: Array,
+      required: true
     },
     linesCleared: {
-      type: Number
+      type: Number,
+      required: true
     },
     gameStatus: {
-      type: GAME_STATUS
+      type: GAME_STATUS,
+      required: true
     },
-    getCellColor: {},
+    getCellColor: {
+      type: Function,
+      required: true
+    },
     difficulty: {
-      type: DIFFICULTY
+      type: DIFFICULTY,
+      required: true
+    },
+    boardSize: {
+      type: String,
+      required: true
+    },
+    hardModeEnabled: {
+      type: Boolean,
+      required: true
     }
   },
-
-  emits: ['difficultyChanged'],
-
+  emits: [
+    'difficultyChanged',
+    'boardSizeChanged',
+    'hardModeToggle'
+  ],
   methods: {
     onDifficultyChanged (newDifficulty) {
       this.$emit('difficultyChanged', newDifficulty)
     },
-
+    onBoardSizeChanged (size) {
+      this.$emit('boardSizeChanged', size)
+    },
+    onHardModeToggle (enabled) {
+      this.$emit('hardModeToggle', enabled)
+    },
     isSelectDisabled (status) {
       return status !== GAME_STATUS.IDLE
           && status !== GAME_STATUS.GAME_OVER
@@ -129,6 +187,65 @@ export default {
     transition: background-color 0.1s;
   }
 
+  &__board-size {
+    margin: 20px 0;
+    text-align: center;
+  }
+
+  &__board-size-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  &__board-size-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background-color: #2a2a2a;
+    color: #cccccc;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+
+    input {
+      cursor: pointer;
+      margin: 0;
+    }
+
+    &_selected {
+      background-color: #444444;
+      color: #ffffff;
+      border: 1px solid #ffaa00;
+    }
+
+    &:hover {
+      background-color: #333333;
+    }
+  }
+
+  &__hard-mode {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #333333;
+    color: #ffffff;
+    border-radius: 4px;
+  }
+
+  &__hard-mode-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1.4;
+    white-space: pre-line;
+    text-align: center;
+  }
+
   &__difficulty {
     &__header {
       margin: 15px 0;
@@ -140,6 +257,7 @@ export default {
     &__select {
       appearance: none;
       width: 100%;
+      padding: 10px;
       background-color: #2a2a2a;
       color: #ffffff;
       cursor: pointer;
@@ -181,7 +299,7 @@ export default {
 
   &__status-text {
     margin: 0;
-    font-size: 1.2em;
+    font-size: 16px;
   }
 }
 </style>
