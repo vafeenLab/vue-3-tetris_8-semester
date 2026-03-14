@@ -31,7 +31,7 @@ export const CONTROLS = {
   DROP: '↓',
   PAUSE: '⏸',
   PLAY: '▶',
-  RESET: '↺'
+  RESET: '↺',
 }
 
 export const BOARD_SIZES = {
