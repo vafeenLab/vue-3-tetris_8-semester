@@ -179,37 +179,41 @@ export default {
         const curY = this.currentY
 
         piece.shape.forEach((row, y) => {
-          if (row) {
-            row.forEach((cell, x) => {
-              if (cell > 0) {
-                const boardY = ghostYVal + y
-                const boardX = curX + x
-                if (boardY >= 0 && boardY < this.currentBoardHeight && boardX >= 0 && boardX < this.currentBoardWidth) {
-                  if (display[boardY] && display[boardY][boardX] === 0) {
-                    display[boardY][boardX] = GHOST_VALUE
-                  }
+          if (!row) { 
+            return
+          }
+          
+          row.forEach((cell, x) => {
+            if (cell > 0) {
+              const boardY = ghostYVal + y
+              const boardX = curX + x
+              if (boardY >= 0 && boardY < this.currentBoardHeight && boardX >= 0 && boardX < this.currentBoardWidth) {
+                if (display[boardY] && display[boardY][boardX] === 0) {
+                  display[boardY][boardX] = GHOST_VALUE
                 }
               }
-            })
-          }
+            }
+          })
         })
 
         piece.shape.forEach((row, y) => {
-          if (row) {
-            row.forEach((cell, x) => {
-              if (cell > 0) {
-                const boardY = curY + y
-                const boardX = curX + x
-                if (boardY >= 0 
-                  && boardY < this.currentBoardHeight 
-                  && boardX >= 0 
-                  && boardX < this.currentBoardWidth
-                  && display[boardY]) {
-                  display[boardY][boardX] = piece.colorId
-                }
-              }
-            })
+          if (!row) {
+            return
           }
+          
+          row.forEach((cell, x) => {
+            if (cell > 0) {
+              const boardY = curY + y
+              const boardX = curX + x
+              if (boardY >= 0 
+                && boardY < this.currentBoardHeight 
+                && boardX >= 0 
+                && boardX < this.currentBoardWidth
+                && display[boardY]) {
+                display[boardY][boardX] = piece.colorId
+              }
+            }
+          })
         })
       }
 
@@ -228,13 +232,15 @@ export default {
         .map(() => Array(NEXT_PIECE_SIZE).fill(0))
 
       this.nextPiece.shape.forEach((row, y) => {
-        if (row) {
-          row.forEach((cell, x) => {
-            if (cell > 0) {
-              result[y][x] = this.nextPiece.colorId
-            }
-          })
+        if (!row) {
+          return
         }
+        
+        row.forEach((cell, x) => {
+          if (cell > 0) {
+            result[y][x] = this.nextPiece.colorId
+          }
+        })
       })
 
       return result
@@ -373,34 +379,36 @@ export default {
       
       if (piece.shape && piece.cells) {
         piece.shape.forEach((row, y) => {
-          if (row) {
-            row.forEach((cell, x) => {
-              if (cell !== 0) {
-                const boardY = posY + y
-                const boardX = posX + x
-                if (
-                  boardY >= 0 &&
-                  boardY < this.currentBoardHeight &&
-                  boardX >= 0 &&
-                  boardX < this.currentBoardWidth &&
-                  this.board[boardY] &&
-                  this.board[boardY][boardX] &&
-                  this.board[boardY][boardX].value === 0
-                ) {
-                  const cellData = piece.cells[y] && piece.cells[y][x] ? piece.cells[y][x] : { isSteel: false, steelHit: false }
-                  
-                  this.board[boardY][boardX] = {
-                    value: piece.colorId,
-                    color: piece.color,
-                    colorId: piece.colorId,
-                    isSteel: cellData.isSteel,
-                    steelHit: false,
-                    cellId: `cell-${boardY}-${boardX}-${Date.now()}-${Math.random()}`
-                  }
+          if (!row) {
+            return
+          }
+          
+          row.forEach((cell, x) => {
+            if (cell !== 0) {
+              const boardY = posY + y
+              const boardX = posX + x
+              if (
+                boardY >= 0 &&
+                boardY < this.currentBoardHeight &&
+                boardX >= 0 &&
+                boardX < this.currentBoardWidth &&
+                this.board[boardY] &&
+                this.board[boardY][boardX] &&
+                this.board[boardY][boardX].value === 0
+              ) {
+                const cellData = piece.cells[y] && piece.cells[y][x] ? piece.cells[y][x] : { isSteel: false, steelHit: false }
+                
+                this.board[boardY][boardX] = {
+                  value: piece.colorId,
+                  color: piece.color,
+                  colorId: piece.colorId,
+                  isSteel: cellData.isSteel,
+                  steelHit: false,
+                  cellId: `cell-${boardY}-${boardX}-${Date.now()}-${Math.random()}`
                 }
               }
-            })
-          }
+            }
+          })
         })
       }
     },
