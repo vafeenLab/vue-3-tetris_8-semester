@@ -3,7 +3,10 @@
     <h1 class="tetris-page__title">Тетрис</h1>
 
     <div class="tetris-page__game-area">
-      <div class="tetris-page__board">
+      <div
+        ref="gameBoard"
+        class="tetris-page__board"
+      >
         <div
           v-for="(row, y) in displayBoard"
           :key="y"
@@ -11,11 +14,12 @@
         >
           <div
             v-for="(cell, x) in row"
-            :key="x"
+            :key="`${y}-${x}-${cell}`"
             class="tetris-page__board-cell"
             :class="{
               'tetris-page__board-cell_filled': cell > 0,
               'tetris-page__board-cell_ghost': cell === GHOST_VALUE,
+              'tetris-page__board-cell_steel': isSteelCell(cell)
             }"
             :style="cell > 0 ? getCellColor(cell) : {}"
           ></div>
@@ -29,7 +33,11 @@
           :game-status="gameStatus"
           :get-cell-color="getCellColor"
           :difficulty="difficulty"
-          @difficulty-changed="(val) => actions.changeDifficulty(val)"
+          :board-size="boardSize"
+          :hard-mode-enabled="hardModeEnabled"
+          @difficulty-changed="(val) => changeDifficulty(val)"
+          @board-size-changed="(val) => changeBoardSize(val)"
+          @hard-mode-toggle="(val) => toggleHardMode(val)"
         />
         <Controls
           :game-status="gameStatus"
@@ -60,20 +68,22 @@
   </div>
 </template>
 
+
 <script>
 import { mapGetters } from 'vuex'
 import InfoPanel from '../ui/InfoPanel.vue'
 import Controls from '../ui/Controls.vue'
 import {
-  BOARD_WIDTH,
-  BOARD_HEIGHT,
   GHOST_VALUE,
   NEXT_PIECE_SIZE,
   GHOST_BACKGROUND,
   ERROR_COLOR,
   GAME_STATUS,
   DIFFICULTY,
-  BASE_SPEEDS
+  BASE_SPEEDS,
+  BOARD_SIZES,
+  STEEL_OVERLAY,
+  BASE_PIECES
 } from '@/constants/constants'
 
 export default {
@@ -92,19 +102,44 @@ export default {
       linesCleared: 0,
       gameStatus: GAME_STATUS.IDLE,
       difficulty: DIFFICULTY.MEDIUM,
+      boardSize: 'MEDIUM',
+      hardModeEnabled: false,
       gameInterval: null,
+      touchStartX: null,
+      touchStartY: null,
+      touchStartTime: null,
+      LONG_PRESS_DURATION: 500,
+      SWIPE_THRESHOLD: 30,
       GAME_STATUS,
       DIFFICULTY,
       GHOST_VALUE,
       GHOST_BACKGROUND,
       ERROR_COLOR,
-      BASE_SPEEDS
+      BASE_SPEEDS,
+      STEEL_OVERLAY,
+      BOARD_SIZES
     }
   },
   computed: {
     ...mapGetters('shapes', {
       allShapes: 'getAllShapes'
     }),
+
+    canChangeSettings () {
+      return this.gameStatus === GAME_STATUS.IDLE || this.gameStatus === GAME_STATUS.GAME_OVER
+    },
+
+    currentBoardDimensions () {
+      return BOARD_SIZES[this.boardSize] || BOARD_SIZES.MEDIUM
+    },
+
+    currentBoardWidth () {
+      return this.currentBoardDimensions.width
+    },
+
+    currentBoardHeight () {
+      return this.currentBoardDimensions.height
+    },
 
     actions () {
       return {
@@ -129,43 +164,52 @@ export default {
     },
 
     displayBoard () {
+      if (!this.board || !this.board.length) {
+        return Array(this.currentBoardHeight).fill(0).map(() => Array(this.currentBoardWidth).fill(0))
+      }
+      
       const display = this.board.map(row => row.map(
-        cell => (cell.value > 0 ? cell.value : 0)
+        cell => (cell && cell.value > 0 ? cell.value : 0)
       ))
 
-      if (this.currentPiece && this.gameStatus === GAME_STATUS.PLAYING) {
+      if (this.currentPiece && this.currentPiece.shape && this.gameStatus === GAME_STATUS.PLAYING) {
         const piece = this.currentPiece
         const ghostYVal = this.ghostY
         const curX = this.currentX
         const curY = this.currentY
 
         piece.shape.forEach((row, y) => {
-          row.forEach((cell, x) => {
-            if (cell > 0) {
-              const boardY = ghostYVal + y
-              const boardX = curX + x
-              if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
-                if (display[boardY][boardX] === 0) {
-                  display[boardY][boardX] = GHOST_VALUE
+          if (row) {
+            row.forEach((cell, x) => {
+              if (cell > 0) {
+                const boardY = ghostYVal + y
+                const boardX = curX + x
+                if (boardY >= 0 && boardY < this.currentBoardHeight && boardX >= 0 && boardX < this.currentBoardWidth) {
+                  if (display[boardY] && display[boardY][boardX] === 0) {
+                    display[boardY][boardX] = GHOST_VALUE
+                  }
                 }
               }
-            }
-          })
+            })
+          }
         })
 
         piece.shape.forEach((row, y) => {
-          row.forEach((cell, x) => {
-            if (cell > 0) {
-              const boardY = curY + y
-              const boardX = curX + x
-              if (boardY >= 0 
-                && boardY < BOARD_HEIGHT 
-                && boardX >= 0 
-                && boardX < BOARD_WIDTH) {
-                display[boardY][boardX] = piece.colorId
+          if (row) {
+            row.forEach((cell, x) => {
+              if (cell > 0) {
+                const boardY = curY + y
+                const boardX = curX + x
+                if (boardY >= 0 
+                  && boardY < this.currentBoardHeight 
+                  && boardX >= 0 
+                  && boardX < this.currentBoardWidth
+                  && display[boardY]) {
+                  display[boardY][boardX] = piece.colorId
+                }
               }
-            }
-          })
+            })
+          }
         })
       }
 
@@ -173,7 +217,7 @@ export default {
     },
 
     nextPieceBoard () {
-      if (!this.nextPiece) {
+      if (!this.nextPiece || !this.nextPiece.shape) {
         return Array(NEXT_PIECE_SIZE)
           .fill(0)
           .map(() => Array(NEXT_PIECE_SIZE).fill(0))
@@ -184,11 +228,13 @@ export default {
         .map(() => Array(NEXT_PIECE_SIZE).fill(0))
 
       this.nextPiece.shape.forEach((row, y) => {
-        row.forEach((cell, x) => {
-          if (cell > 0) {
-            result[y][x] = this.nextPiece.colorId
-          }
-        })
+        if (row) {
+          row.forEach((cell, x) => {
+            if (cell > 0) {
+              result[y][x] = this.nextPiece.colorId
+            }
+          })
+        }
       })
 
       return result
@@ -213,21 +259,46 @@ export default {
     },
 
     createPiece (shapeData) {
-      return {
-        shape: shapeData.shape.map(row => [...row]),
-        color: shapeData.color,
-        colorId: this.extractNumber(shapeData.id) ?? Math.floor(Math.random() * 1000000),
-        id: shapeData.id
+      if (!shapeData) {
+        return null
       }
+      
+      const cells = shapeData.shape ? shapeData.shape.map(row => 
+        row.map(cell => {
+          if (cell === 0) {
+            return { isSteel: false, steelHit: false }
+          }
+          return {
+            isSteel: this.hardModeEnabled ? (shapeData.isSteel || Math.random() > 0.7) : false,
+            steelHit: false
+          }
+        })
+      ) : [[{ isSteel: false, steelHit: false }]]
+      
+      const piece = {
+        shape: shapeData.shape ? shapeData.shape.map(row => [...row]) : [[1]],
+        color: shapeData.color || '#FF0000',
+        colorId: this.extractNumber(shapeData.id) ?? Math.floor(Math.random() * 1000000),
+        id: shapeData.id || 'custom-' + Date.now(),
+        cells: cells
+      }
+      
+      return piece
     },
 
     getRandomPiece () {
       const shapes = this.allShapes
+      if (!shapes || shapes.length === 0) {
+        return this.createPiece(BASE_PIECES[0])
+      }
       const randomIndex = Math.floor(Math.random() * shapes.length)
       return this.createPiece(shapes[randomIndex])
     },
 
     collision (shape, offsetX, offsetY) {
+      if (!shape) {
+        return true
+      }
       return shape.some((row, y) =>
         row.some((cell, x) => {
           if (cell === 0) {
@@ -236,12 +307,12 @@ export default {
           const boardX = offsetX + x
           const boardY = offsetY + y
           if (boardX < 0 
-          || boardX >= BOARD_WIDTH 
-          || boardY >= BOARD_HEIGHT) {
+          || boardX >= this.currentBoardWidth 
+          || boardY >= this.currentBoardHeight) {
             return true
           }
           if (boardY >= 0 
-          && this.board[boardY]?.[boardX]?.value !== 0) {
+          && this.board[boardY] && this.board[boardY][boardX] && this.board[boardY][boardX].value !== 0) {
             return true
           }
           return false
@@ -250,15 +321,18 @@ export default {
     },
 
     initBoard () {
-      this.board = Array(BOARD_HEIGHT)
+      this.board = Array(this.currentBoardHeight)
         .fill(0)
-        .map(() =>
-          Array(BOARD_WIDTH)
+        .map((_, y) =>
+          Array(this.currentBoardWidth)
             .fill(0)
-            .map(() => ({
+            .map((_, x) => ({
               value: 0,
               color: null,
-              colorId: null
+              colorId: null,
+              isSteel: false,
+              steelHit: false,
+              cellId: `cell-${y}-${x}-${Date.now()}-${Math.random()}`
             }))
         )
     },
@@ -296,45 +370,78 @@ export default {
       const piece = this.currentPiece
       const posX = this.currentX
       const posY = this.currentY
-      piece.shape.forEach((row, y) => {
-        row.forEach((cell, x) => {
-          if (cell !== 0) {
-            const boardY = posY + y
-            const boardX = posX + x
-            if (
-              boardY >= 0 &&
-              boardY < BOARD_HEIGHT &&
-              boardX >= 0 &&
-              boardX < BOARD_WIDTH &&
-              this.board[boardY][boardX].value === 0
-            ) {
-              this.board[boardY][boardX] = {
-                value: piece.colorId,
-                color: piece.color,
-                colorId: piece.colorId
+      
+      if (piece.shape && piece.cells) {
+        piece.shape.forEach((row, y) => {
+          if (row) {
+            row.forEach((cell, x) => {
+              if (cell !== 0) {
+                const boardY = posY + y
+                const boardX = posX + x
+                if (
+                  boardY >= 0 &&
+                  boardY < this.currentBoardHeight &&
+                  boardX >= 0 &&
+                  boardX < this.currentBoardWidth &&
+                  this.board[boardY] &&
+                  this.board[boardY][boardX] &&
+                  this.board[boardY][boardX].value === 0
+                ) {
+                  const cellData = piece.cells[y] && piece.cells[y][x] ? piece.cells[y][x] : { isSteel: false, steelHit: false }
+                  
+                  this.board[boardY][boardX] = {
+                    value: piece.colorId,
+                    color: piece.color,
+                    colorId: piece.colorId,
+                    isSteel: cellData.isSteel,
+                    steelHit: false,
+                    cellId: `cell-${boardY}-${boardX}-${Date.now()}-${Math.random()}`
+                  }
+                }
               }
-            }
+            })
           }
         })
-      })
+      }
     },
 
     removeFullLines () {
       let linesRemoved = 0
-      let y = BOARD_HEIGHT - 1
-      while (y >= 0) {
-        if (this.board[y].every(cell => cell.value !== 0)) {
-          this.board.splice(y, 1)
-          this.board.unshift(
-            Array(BOARD_WIDTH)
-              .fill(0)
-              .map(() => ({ value: 0, color: null, colorId: null }))
-          )
-          linesRemoved++
-        } else {
-          y--
+      
+      for (let y = 0; y < this.currentBoardHeight; y++) {
+        const line = this.board[y]
+        if (!line) continue
+        
+        const isLineFull = line.every(cell => cell && cell.value !== 0)
+        
+        if (isLineFull) {
+          const steelCells = line.filter(cell => cell.isSteel)
+          
+          if (steelCells.length > 0) {
+            steelCells.forEach(cell => {
+              cell.isSteel = false
+              cell.steelHit = true
+            })
+          } else {
+            this.board.splice(y, 1)
+            this.board.unshift(
+              Array(this.currentBoardWidth)
+                .fill(0)
+                .map((_, x) => ({ 
+                  value: 0, 
+                  color: null, 
+                  colorId: null, 
+                  isSteel: false, 
+                  steelHit: false,
+                  cellId: `cell-0-${x}-${Date.now()}-${Math.random()}`
+                }))
+            )
+            linesRemoved++
+            y--
+          }
         }
       }
+      
       if (linesRemoved > 0) {
         this.addLines(linesRemoved)
       }
@@ -345,18 +452,20 @@ export default {
         this.setNextPiece(this.getRandomPiece())
       }
 
-      this.setCurrentPiece(JSON.parse(JSON.stringify(this.nextPiece)))
+      const nextPieceCopy = JSON.parse(JSON.stringify(this.nextPiece))
+      this.setCurrentPiece(nextPieceCopy)
       this.setNextPiece(this.getRandomPiece())
 
-      const newX = Math.floor((BOARD_WIDTH - (this.currentPiece?.shape[0].length || 0)) / 2)
-      this.setCurrentPosition(newX, 0)
+      if (this.currentPiece && this.currentPiece.shape) {
+        const newX = Math.floor((this.currentBoardWidth - (this.currentPiece.shape[0]?.length || 0)) / 2)
+        this.setCurrentPosition(newX, 0)
 
-      if (this.currentPiece
-        && this.collision(this.currentPiece.shape, this.currentX, this.currentY)) {
-        this.setGameStatus(GAME_STATUS.GAME_OVER)
-        if (this.gameInterval) {
-          clearInterval(this.gameInterval)
-          this.gameInterval = null
+        if (this.collision(this.currentPiece.shape, this.currentX, this.currentY)) {
+          this.setGameStatus(GAME_STATUS.GAME_OVER)
+          if (this.gameInterval) {
+            clearInterval(this.gameInterval)
+            this.gameInterval = null
+          }
         }
       }
     },
@@ -379,14 +488,16 @@ export default {
     },
 
     movePieceRight () {
-      if (!this.currentPiece || this.gameStatus !== GAME_STATUS.PLAYING) return
+      if (!this.currentPiece || this.gameStatus !== GAME_STATUS.PLAYING) {
+        return
+      }
       if (!this.collision(this.currentPiece.shape, this.currentX + 1, this.currentY)) {
         this.setCurrentPosition(this.currentX + 1, this.currentY)
       }
     },
 
     rotateCurrentPiece () {
-      if (!this.currentPiece || this.gameStatus !== GAME_STATUS.PLAYING) {
+      if (!this.currentPiece || !this.currentPiece.shape || !this.currentPiece.cells || this.gameStatus !== GAME_STATUS.PLAYING) {
         return
       }
 
@@ -394,22 +505,29 @@ export default {
         this.currentPiece.shape.map(row => row[index]).reverse()
       )
 
+      const rotatedCells = this.currentPiece.cells[0].map((_, index) =>
+        this.currentPiece.cells.map(row => row[index]).reverse()
+      )
+
       if (!this.collision(rotated, this.currentX, this.currentY)) {
         this.setCurrentPiece({
           ...this.currentPiece,
-          shape: rotated
+          shape: rotated,
+          cells: rotatedCells
         })
       } else {
         if (!this.collision(rotated, this.currentX - 1, this.currentY)) {
           this.setCurrentPiece({
             ...this.currentPiece,
-            shape: rotated
+            shape: rotated,
+            cells: rotatedCells
           })
           this.setCurrentPosition(this.currentX - 1, this.currentY)
         } else if (!this.collision(rotated, this.currentX + 1, this.currentY)) {
           this.setCurrentPiece({
             ...this.currentPiece,
-            shape: rotated
+            shape: rotated,
+            cells: rotatedCells
           })
           this.setCurrentPosition(this.currentX + 1, this.currentY)
         }
@@ -428,6 +546,13 @@ export default {
         this.removeFullLines()
         this.spawnNewPiece()
       }
+    },
+
+    softDrop () {
+      if (!this.currentPiece || this.gameStatus !== GAME_STATUS.PLAYING) {
+        return
+      }
+      this.movePieceDown()
     },
 
     hardDropPiece () {
@@ -465,9 +590,25 @@ export default {
       }
     },
 
-    changeDifficulty (newDifficulty) {
-      this.difficulty = newDifficulty
-      this.startGameLoop()
+    changeDifficulty (value) {
+      if (this.canChangeSettings) {
+        this.difficulty = value
+        this.initGame()
+      }
+    },
+
+    changeBoardSize (size) {
+      if (this.canChangeSettings) {
+        this.boardSize = size
+        this.initGame()
+      }
+    },
+
+    toggleHardMode (enabled) {
+      if (this.canChangeSettings) {
+        this.hardModeEnabled = enabled
+        this.initGame()
+      }
     },
 
     resetGame () {
@@ -495,28 +636,112 @@ export default {
         return { backgroundColor: GHOST_BACKGROUND }
       }
 
-      const cell = this.board.flat().find(c => c.colorId === colorId)
+      const allCells = this.board.flat().filter(c => c)
+      const cell = allCells.find(c => c && c.colorId === colorId)
       if (cell) {
+        if (cell.isSteel && !cell.steelHit) {
+          return {
+            backgroundColor: cell.color,
+            backgroundImage: `linear-gradient(135deg, ${STEEL_OVERLAY}, ${STEEL_OVERLAY})`
+          }
+        }
         return { backgroundColor: cell.color }
       }
 
-      if (this.currentPiece?.colorId === colorId) {
+      if (this.currentPiece && this.currentPiece.colorId === colorId) {
+        for (let y = 0; y < this.currentPiece.cells.length; y++) {
+          for (let x = 0; x < this.currentPiece.cells[y].length; x++) {
+            if (this.currentPiece.cells[y][x].isSteel && !this.currentPiece.cells[y][x].steelHit) {
+              return {
+                backgroundColor: this.currentPiece.color,
+                backgroundImage: `linear-gradient(135deg, ${STEEL_OVERLAY}, ${STEEL_OVERLAY})`
+              }
+            }
+          }
+        }
         return { backgroundColor: this.currentPiece.color }
       }
-      if (this.nextPiece?.colorId === colorId) {
+      
+      if (this.nextPiece && this.nextPiece.colorId === colorId) {
         return { backgroundColor: this.nextPiece.color }
       }
 
       return { backgroundColor: ERROR_COLOR }
+    },
+
+    isSteelCell (colorId) {
+      if (colorId === GHOST_VALUE || colorId <= 0) {
+        return false
+      }
+      const allCells = this.board.flat().filter(c => c)
+      const cell = allCells.find(c => c && c.colorId === colorId)
+      if (cell) {
+        return cell.isSteel && !cell.steelHit
+      }
+      return false
+    },
+
+    handleTouchStart (e) {
+      e.preventDefault()
+      const touch = e.touches[0]
+      this.touchStartX = touch.clientX
+      this.touchStartY = touch.clientY
+      this.touchStartTime = Date.now()
+    },
+
+    handleTouchEnd (e) {
+      e.preventDefault()
+      if (!this.touchStartX || !this.touchStartY || !this.touchStartTime) {
+        return
+      }
+
+      const touchEnd = e.changedTouches[0]
+      const deltaX = touchEnd.clientX - this.touchStartX
+      const deltaY = touchEnd.clientY - this.touchStartY
+      const touchDuration = Date.now() - this.touchStartTime
+
+      if (touchDuration > this.LONG_PRESS_DURATION && Math.abs(deltaX) < this.SWIPE_THRESHOLD && Math.abs(deltaY) < this.SWIPE_THRESHOLD) {
+        this.hardDropPiece()
+      } else if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > this.SWIPE_THRESHOLD) {
+        if (deltaX > 0) {
+          this.movePieceRight()
+        } else {
+          this.movePieceLeft()
+        }
+      } else if (Math.abs(deltaY) > this.SWIPE_THRESHOLD) {
+        if (deltaY > 0) {
+          this.softDrop()
+        }
+      }
+
+      this.touchStartX = null
+      this.touchStartY = null
+      this.touchStartTime = null
+    },
+
+    handleTouchMove (e) {
+      e.preventDefault()
     }
   },
   mounted () {
     this.initGame()
+    const gameBoard = this.$refs.gameBoard
+    if (gameBoard) {
+      gameBoard.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false })
+      gameBoard.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: false })
+      gameBoard.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false })
+    }
   },
   beforeUnmount () {
     if (this.gameInterval) {
       clearInterval(this.gameInterval)
       this.gameInterval = null
+    }
+    const gameBoard = this.$refs.gameBoard
+    if (gameBoard) {
+      gameBoard.removeEventListener('touchstart', this.handleTouchStart)
+      gameBoard.removeEventListener('touchend', this.handleTouchEnd)
+      gameBoard.removeEventListener('touchmove', this.handleTouchMove)
     }
   }
 }
@@ -524,21 +749,26 @@ export default {
 
 <style scoped lang="scss">
 .tetris-page {
-  max-width: 800px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 
   &__title {
     text-align: center;
     color: #ffffff;
     margin-bottom: 30px;
+    font-size: 36px;
   }
 
   &__game-area {
     display: flex;
-    gap: 30px;
+    gap: 40px;
     justify-content: center;
-    flex-wrap: wrap;
+    align-items: flex-start;
+    flex: 1;
   }
 
   &__board {
@@ -546,6 +776,8 @@ export default {
     padding: 10px;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   &__board-row {
@@ -553,28 +785,44 @@ export default {
   }
 
   &__board-cell {
-    width: 30px;
-    height: 30px;
+    width: 35px;
+    height: 35px;
     border: 1px solid #333333;
     background-color: #000000;
     transition: background-color 0.1s;
+    position: relative;
 
     &_ghost {
       background-color: rgba(255, 255, 255, 0.1);
       border: 1px dashed #666666;
     }
+
+    &_steel::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(0,0,0,0.5), rgba(0,0,0,0.5));
+      pointer-events: none;
+    }
   }
 
   &__info-panel {
-    min-width: 150px;
+    min-width: 280px;
+    width: 280px;
     padding: 20px;
     background-color: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 
   &__navigation {
-    margin-top: 30px;
+    margin-top: 40px;
     text-align: center;
     display: flex;
     gap: 15px;
@@ -583,7 +831,6 @@ export default {
 
   &__nav-link {
     display: inline-block;
-    margin: 0 10px;
     padding: 8px 16px;
     color: #ffffff;
     text-decoration: none;
@@ -594,6 +841,65 @@ export default {
     &:hover {
       background-color: #ffffff;
       color: #000000;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    &__board-cell {
+      width: 30px;
+      height: 30px;
+    }
+  }
+
+  @media (max-width: 900px) {
+    &__game-area {
+      gap: 20px;
+    }
+
+    &__board-cell {
+      width: 25px;
+      height: 25px;
+    }
+
+    &__info-panel {
+      width: 250px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 10px;
+
+    &__game-area {
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    &__board-cell {
+      width: 30px;
+      height: 30px;
+    }
+
+    &__info-panel {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    &__navigation {
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    &__nav-link {
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    &__board-cell {
+      width: 25px;
+      height: 25px;
     }
   }
 }

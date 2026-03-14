@@ -31,51 +31,65 @@ export const CONTROLS = {
   DROP: '↓',
   PAUSE: '⏸',
   PLAY: '▶',
-  RESET: '↺',
+  RESET: '↺'
 }
+
+export const BOARD_SIZES = {
+  SMALL: { width: 8, height: 16, label: 'Маленькое 8x16' },
+  MEDIUM: { width: 10, height: 20, label: 'Среднее 10x20' },
+  LARGE: { width: 12, height: 24, label: 'Большое 12x24' }
+}
+
+export const STEEL_OVERLAY = 'rgba(0, 0, 0, 0.5)'
 
 export const BASE_PIECES = [
   {
     id: 'base-1',
     name: 'I-образная',
     color: '#00FFFF',
-    shape: [[1, 1, 1, 1]]
+    shape: [[1, 1, 1, 1]],
+    isSteel: false
   },
   {
     id: 'base-2',
     name: 'O-образная',
     color: '#FFFF00',
-    shape: [[1, 1], [1, 1]]
+    shape: [[1, 1], [1, 1]],
+    isSteel: false
   },
   {
     id: 'base-3',
     name: 'T-образная',
     color: '#800080',
-    shape: [[0, 1, 0], [1, 1, 1]]
+    shape: [[0, 1, 0], [1, 1, 1]],
+    isSteel: false
   },
   {
     id: 'base-4',
     name: 'S-образная',
     color: '#FFA500',
-    shape: [[0, 1, 1], [1, 1, 0]]
+    shape: [[0, 1, 1], [1, 1, 0]],
+    isSteel: false
   },
   {
     id: 'base-5',
     name: 'Z-образная',
     color: '#FF0000',
-    shape: [[1, 1, 0], [0, 1, 1]]
+    shape: [[1, 1, 0], [0, 1, 1]],
+    isSteel: false
   },
   {
     id: 'base-6',
     name: 'L-образная',
     color: '#0000FF',
-    shape: [[1, 0, 0], [1, 1, 1]]
+    shape: [[1, 0, 0], [1, 1, 1]],
+    isSteel: false
   },
   {
     id: 'base-7',
     name: 'J-образная',
     color: '#00FF00',
-    shape: [[0, 0, 1], [1, 1, 1]]
+    shape: [[0, 0, 1], [1, 1, 1]],
+    isSteel: false
   }
 ]
-
