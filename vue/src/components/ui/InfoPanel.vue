@@ -147,8 +147,8 @@ export default {
       this.$emit('hardModeToggle', enabled)
     },
     isSelectDisabled (status) {
-      return status !== GAME_STATUS.IDLE 
-      && status !== GAME_STATUS.GAME_OVER
+      return status !== GAME_STATUS.IDLE
+          && status !== GAME_STATUS.GAME_OVER
     }
   }
 }
