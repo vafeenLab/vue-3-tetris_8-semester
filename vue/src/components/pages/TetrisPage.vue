@@ -794,8 +794,8 @@ export default {
   }
 
   &__board-cell {
-    width: 35px;
-    height: 35px;
+    width: 30px;
+    height: 30px;
     border: 1px solid #333333;
     background-color: #000000;
     transition: background-color 0.1s;
@@ -831,7 +831,7 @@ export default {
   }
 
   &__navigation {
-    margin-top: 40px;
+    margin-top: 30px;
     text-align: center;
     display: flex;
     gap: 15px;
