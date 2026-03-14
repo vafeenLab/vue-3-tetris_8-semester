@@ -774,7 +774,7 @@ export default {
 
   &__game-area {
     display: flex;
-    gap: 40px;
+    gap: 30px;
     justify-content: center;
     align-items: flex-start;
     flex: 1;
