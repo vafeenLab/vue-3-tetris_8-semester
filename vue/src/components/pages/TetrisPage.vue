@@ -468,11 +468,12 @@ export default {
         const newX = Math.floor((this.currentBoardWidth - (this.currentPiece.shape[0]?.length || 0)) / 2)
         this.setCurrentPosition(newX, 0)
 
-        if (this.collision(this.currentPiece.shape, this.currentX, this.currentY)) {
-          this.setGameStatus(GAME_STATUS.GAME_OVER)
-          if (this.gameInterval) {
-            clearInterval(this.gameInterval)
-            this.gameInterval = null
+      if (this.currentPiece
+        && this.collision(this.currentPiece.shape, this.currentX, this.currentY)) {
+        this.setGameStatus(GAME_STATUS.GAME_OVER)
+        if (this.gameInterval) {
+          clearInterval(this.gameInterval)
+          this.gameInterval = null
           }
         }
       }
