@@ -19,7 +19,7 @@
             :class="{
               'tetris-page__board-cell_filled': cell > 0,
               'tetris-page__board-cell_ghost': cell === GHOST_VALUE,
-              'tetris-page__board-cell_steel': isSteelCell(cell)
+              'tetris-page__board-cell_steel': isSteelCell(cell, y, x)
             }"
             :style="cell > 0 ? getCellColor(cell) : {}"
           ></div>
@@ -268,21 +268,17 @@ export default {
       if (!shapeData) {
         return null
       }
-      
-      const cells = shapeData.shape ? shapeData.shape.map(row => 
-        row.map(cell => {
-          if (cell === 0) {
-            return { isSteel: false, steelHit: false }
-          }
-          return {
-            isSteel: this.hardModeEnabled ? (shapeData.isSteel || Math.random() > 0.7) : false,
-            steelHit: false
-          }
-        })
-      ) : [[{ isSteel: false, steelHit: false }]]
+
+      const isSteel = this.hardModeEnabled
+      const cells = shapeData.shape.map(row =>
+        row.map(cell => cell === 0
+          ? { isSteel: false, steelHit: false }
+          : { isSteel, steelHit: false }
+        )
+      )
       
       const piece = {
-        shape: shapeData.shape ? shapeData.shape.map(row => [...row]) : [[1]],
+        shape: shapeData.shape.map(row => [...row]),
         color: shapeData.color || '#FF0000',
         colorId: this.extractNumber(shapeData.id) ?? Math.floor(Math.random() * 1000000),
         id: shapeData.id || 'custom-' + Date.now(),
@@ -415,41 +411,40 @@ export default {
 
     removeFullLines () {
       let linesRemoved = 0
-      
-      for (let y = 0; y < this.currentBoardHeight; y++) {
+      let y = 0;
+      while (y < this.currentBoardHeight) {
         const line = this.board[y]
-        if (!line) continue
-        
-        const isLineFull = line.every(cell => cell && cell.value !== 0)
-        
-        if (isLineFull) {
-          const steelCells = line.filter(cell => cell.isSteel)
-          
-          if (steelCells.length > 0) {
-            steelCells.forEach(cell => {
-              cell.isSteel = false
-              cell.steelHit = true
+        if (!line) {
+          y++
+          continue
+        }
+
+        if (line.every(cell => cell && cell.value !== 0)) {
+          const hasUntouchedSteel = line.some(cell => 
+            cell.isSteel && !cell.steelHit
+          )
+          if (hasUntouchedSteel) {
+            line.forEach(cell => {
+              if (cell.isSteel && !cell.steelHit) {
+                cell.isSteel = false
+                cell.steelHit = true
+              }
             })
+            y++
+            continue
           } else {
             this.board.splice(y, 1)
             this.board.unshift(
-              Array(this.currentBoardWidth)
-                .fill(0)
-                .map((_, x) => ({ 
-                  value: 0, 
-                  color: null, 
-                  colorId: null, 
-                  isSteel: false, 
-                  steelHit: false,
-                  cellId: `cell-0-${x}-${Date.now()}-${Math.random()}`
-                }))
+              Array(this.currentBoardWidth).fill(0).map((_, x) => ({
+                value: 0, color: null, colorId: null, isSteel: false, steelHit: false
+              }))
             )
             linesRemoved++
-            y--
+            continue
           }
         }
+        y++
       }
-      
       if (linesRemoved > 0) {
         this.addLines(linesRemoved)
       }
@@ -645,29 +640,12 @@ export default {
         return { backgroundColor: GHOST_BACKGROUND }
       }
 
-      const allCells = this.board.flat().filter(c => c)
-      const cell = allCells.find(c => c && c.colorId === colorId)
+      const cell = this.board.flat().find(c => c && c.colorId === colorId)
       if (cell) {
-        if (cell.isSteel && !cell.steelHit) {
-          return {
-            backgroundColor: cell.color,
-            backgroundImage: `linear-gradient(135deg, ${STEEL_OVERLAY}, ${STEEL_OVERLAY})`
-          }
-        }
         return { backgroundColor: cell.color }
       }
 
       if (this.currentPiece && this.currentPiece.colorId === colorId) {
-        for (let y = 0; y < this.currentPiece.cells.length; y++) {
-          for (let x = 0; x < this.currentPiece.cells[y].length; x++) {
-            if (this.currentPiece.cells[y][x].isSteel && !this.currentPiece.cells[y][x].steelHit) {
-              return {
-                backgroundColor: this.currentPiece.color,
-                backgroundImage: `linear-gradient(135deg, ${STEEL_OVERLAY}, ${STEEL_OVERLAY})`
-              }
-            }
-          }
-        }
         return { backgroundColor: this.currentPiece.color }
       }
       
@@ -678,14 +656,23 @@ export default {
       return { backgroundColor: ERROR_COLOR }
     },
 
-    isSteelCell (colorId) {
+    isSteelCell (colorId, y, x) {
       if (colorId === GHOST_VALUE || colorId <= 0) {
         return false
       }
-      const allCells = this.board.flat().filter(c => c)
-      const cell = allCells.find(c => c && c.colorId === colorId)
-      if (cell) {
-        return cell.isSteel && !cell.steelHit
+      const boardCell = this.board[y]?.[x]
+      if (boardCell && boardCell.colorId === colorId) {
+        return boardCell.isSteel && !boardCell.steelHit
+      }
+
+      if (this.currentPiece && this.currentPiece.colorId === colorId) {
+        const pieceY = y - this.currentY
+        const pieceX = x - this.currentX
+        if (pieceY >= 0 && pieceY < this.currentPiece.shape.length &&
+            pieceX >= 0 && pieceX < this.currentPiece.shape[0].length) {
+          const cellData = this.currentPiece.cells[pieceY]?.[pieceX]
+          return cellData ? cellData.isSteel && !cellData.steelHit : false
+        }
       }
       return false
     },
