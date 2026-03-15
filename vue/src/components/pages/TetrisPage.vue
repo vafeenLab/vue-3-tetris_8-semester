@@ -269,7 +269,7 @@ export default {
         return null
       }
 
-      const isSteel = this.hardModeEnabled
+      const isSteel = this.hardModeEnabled ? Math.random() < 0.2 : false
       const cells = shapeData.shape.map(row =>
         row.map(cell => cell === 0
           ? { isSteel: false, steelHit: false }
