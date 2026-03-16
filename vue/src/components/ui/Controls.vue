@@ -73,7 +73,6 @@ export default {
 
 <style scoped lang="scss">
 .controls {
-  margin-top: 30px;
 
   &__row {
     display: flex;
