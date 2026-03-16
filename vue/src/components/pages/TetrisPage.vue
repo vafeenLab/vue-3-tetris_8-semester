@@ -424,14 +424,20 @@ export default {
             cell.isSteel && !cell.steelHit
           )
           if (hasUntouchedSteel) {
+            linesRemoved++
             line.forEach(cell => {
               if (cell.isSteel && !cell.steelHit) {
                 cell.isSteel = false
                 cell.steelHit = true
+              } else {
+                cell.value = 0
+                cell.color = null
+                cell.colorId = null
+                cell.isSteel = false
+                cell.steelHit = false
               }
             })
             y++
-            continue
           } else {
             this.board.splice(y, 1)
             this.board.unshift(
@@ -440,16 +446,15 @@ export default {
               }))
             )
             linesRemoved++
-            continue
           }
+        } else {
+          y++
         }
-        y++
       }
       if (linesRemoved > 0) {
         this.addLines(linesRemoved)
       }
     },
-
     spawnNewPiece () {
       if (!this.nextPiece) {
         this.setNextPiece(this.getRandomPiece())
