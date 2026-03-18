@@ -372,41 +372,43 @@ export default {
       const piece = this.currentPiece
       const posX = this.currentX
       const posY = this.currentY
-      
-      if (piece.shape && piece.cells) {
-        piece.shape.forEach((row, y) => {
-          if (!row) {
+
+      if (!piece.shape || !piece.cells) {
+        return
+      }
+
+      piece.shape.forEach((row, y) => {
+        if (!row) {
+          return
+        }
+        row.forEach((cell, x) => {
+          if (cell === 0) {
             return
           }
-          
-          row.forEach((cell, x) => {
-            if (cell !== 0) {
-              const boardY = posY + y
-              const boardX = posX + x
-              if (
-                boardY >= 0 &&
-                boardY < this.currentBoardHeight &&
-                boardX >= 0 &&
-                boardX < this.currentBoardWidth &&
-                this.board[boardY] &&
-                this.board[boardY][boardX] &&
-                this.board[boardY][boardX].value === 0
-              ) {
-                const cellData = piece.cells[y] && piece.cells[y][x] ? piece.cells[y][x] : { isSteel: false, steelHit: false }
-                
-                this.board[boardY][boardX] = {
-                  value: piece.colorId,
-                  color: piece.color,
-                  colorId: piece.colorId,
-                  isSteel: cellData.isSteel,
-                  steelHit: false,
-                  cellId: `cell-${boardY}-${boardX}-${Date.now()}-${Math.random()}`
-                }
-              }
-            }
-          })
+          const boardY = posY + y
+          const boardX = posX + x
+          if (
+            boardY < 0 &&
+            boardY >= this.currentBoardHeight &&
+            boardX < 0 &&
+            boardX >= this.currentBoardWidth &&
+            !this.board[boardY] &&
+            !this.board[boardY][boardX] &&
+            this.board[boardY][boardX].value !== 0
+          ) {
+            return
+          }
+          const cellData = piece.cells[y] && piece.cells[y][x] ? piece.cells[y][x] : { isSteel: false, steelHit: false }
+          this.board[boardY][boardX] = {
+            value: piece.colorId,
+            color: piece.color,
+            colorId: piece.colorId,
+            isSteel: cellData.isSteel,
+            steelHit: false,
+            cellId: `cell-${boardY}-${boardX}-${Date.now()}-${Math.random()}`
+          }
         })
-      }
+      })
     },
 
     removeFullLines () {
@@ -419,36 +421,37 @@ export default {
           continue
         }
 
-        if (line.every(cell => cell && cell.value !== 0)) {
-          const hasUntouchedSteel = line.some(cell => 
-            cell.isSteel && !cell.steelHit
-          )
-          if (hasUntouchedSteel) {
-            linesRemoved++
-            line.forEach(cell => {
-              if (cell.isSteel && !cell.steelHit) {
-                cell.isSteel = false
-                cell.steelHit = true
-              } else {
-                cell.value = 0
-                cell.color = null
-                cell.colorId = null
-                cell.isSteel = false
-                cell.steelHit = false
-              }
-            })
-            y++
-          } else {
-            this.board.splice(y, 1)
-            this.board.unshift(
-              Array(this.currentBoardWidth).fill(0).map((_, x) => ({
-                value: 0, color: null, colorId: null, isSteel: false, steelHit: false
-              }))
-            )
-            linesRemoved++
-          }
-        } else {
+        if (line.some(cell => cell && cell.value === 0)) {
           y++
+          continue
+        }
+
+        const hasUntouchedSteel = line.some(cell => 
+          cell.isSteel && !cell.steelHit
+        )
+        if (hasUntouchedSteel) {
+          linesRemoved++
+          line.forEach(cell => {
+            if (cell.isSteel && !cell.steelHit) {
+              cell.isSteel = false
+              cell.steelHit = true
+            } else {
+              cell.value = 0
+              cell.color = null
+              cell.colorId = null
+              cell.isSteel = false
+              cell.steelHit = false
+            }
+          })
+          y++
+        } else {
+          this.board.splice(y, 1)
+          this.board.unshift(
+            Array(this.currentBoardWidth).fill(0).map((_, x) => ({
+              value: 0, color: null, colorId: null, isSteel: false, steelHit: false
+            }))
+          )
+          linesRemoved++
         }
       }
       if (linesRemoved > 0) {

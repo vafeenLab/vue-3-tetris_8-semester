@@ -26,7 +26,6 @@
           v-for="(size, key) in BOARD_SIZES"
           :key="key"
           class="info-panel__board-size-option"
-          :class="{ 'info-panel__board-size-option_selected': boardSize === key }"
         >
           <input
             type="radio"
@@ -213,12 +212,6 @@ export default {
     input {
       cursor: pointer;
       margin: 0;
-    }
-
-    &_selected {
-      background-color: #444444;
-      color: #ffffff;
-      border: 1px solid #ffaa00;
     }
 
     &:hover {
