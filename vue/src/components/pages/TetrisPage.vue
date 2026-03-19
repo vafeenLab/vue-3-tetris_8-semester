@@ -750,6 +750,15 @@ export default {
     color: #ffffff;
     margin-bottom: 30px;
     font-size: 36px;
+
+    @media (max-width: 768px) {
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 480px) {
+      font-size: 24px;
+    }
   }
 
   &__game-area {
@@ -758,6 +767,16 @@ export default {
     justify-content: center;
     align-items: flex-start;
     flex: 1;
+
+    @media (max-width: 900px) {
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
   }
 
   &__board {
@@ -767,6 +786,14 @@ export default {
     box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
     touch-action: none;
     -webkit-tap-highlight-color: transparent;
+
+    @media (max-width: 768px) {
+      padding: 8px;
+    }
+
+    @media (max-width: 480px) {
+      padding: 5px;
+    }
   }
 
   &__board-row {
@@ -780,6 +807,26 @@ export default {
     background-color: #000000;
     transition: background-color 0.1s;
     position: relative;
+
+    @media (max-width: 1024px) {
+      width: 30px;
+      height: 30px;
+    }
+
+    @media (max-width: 900px) {
+      width: 25px;
+      height: 25px;
+    }
+
+    @media (max-width: 768px) {
+      width: 30px;
+      height: 30px;
+    }
+
+    @media (max-width: 480px) {
+      width: 25px;
+      height: 25px;
+    }
 
     &_ghost {
       background-color: rgba(255, 255, 255, 0.1);
@@ -808,6 +855,20 @@ export default {
     gap: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+
+    @media (max-width: 900px) {
+      width: 250px;
+    }
+
+    @media (max-width: 768px) {
+      width: 100%;
+      max-width: 400px;
+      padding: 15px;
+    }
+
+    @media (max-width: 480px) {
+      padding: 10px;
+    }
   }
 
   &__navigation {
@@ -816,6 +877,16 @@ export default {
     display: flex;
     gap: 15px;
     justify-content: center;
+
+    @media (max-width: 768px) {
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 480px) {
+      gap: 8px;
+    }
   }
 
   &__nav-link {
@@ -827,68 +898,19 @@ export default {
     border-radius: 4px;
     transition: all 0.3s;
 
-    &:hover {
-      background-color: #ffffff;
-      color: #000000;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    &__board-cell {
-      width: 30px;
-      height: 30px;
-    }
-  }
-
-  @media (max-width: 900px) {
-    &__game-area {
-      gap: 20px;
-    }
-
-    &__board-cell {
-      width: 25px;
-      height: 25px;
-    }
-
-    &__info-panel {
-      width: 250px;
-    }
-  }
-
-  @media (max-width: 768px) {
-    padding: 10px;
-
-    &__game-area {
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-    }
-
-    &__board-cell {
-      width: 30px;
-      height: 30px;
-    }
-
-    &__info-panel {
-      width: 100%;
-      max-width: 400px;
-    }
-
-    &__navigation {
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    &__nav-link {
+    @media (max-width: 768px) {
       padding: 6px 12px;
       font-size: 14px;
     }
-  }
 
-  @media (max-width: 480px) {
-    &__board-cell {
-      width: 25px;
-      height: 25px;
+    @media (max-width: 480px) {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+
+    &:hover {
+      background-color: #ffffff;
+      color: #000000;
     }
   }
 }
