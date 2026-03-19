@@ -178,11 +178,7 @@ export default {
         const curX = this.currentX
         const curY = this.currentY
 
-        piece.shape.forEach((row, y) => {
-          if (!row) { 
-            return
-          }
-          
+        piece.shape.forEach((row, y) => {          
           row.forEach((cell, x) => {
             if (cell > 0) {
               const boardY = ghostYVal + y
@@ -196,11 +192,7 @@ export default {
           })
         })
 
-        piece.shape.forEach((row, y) => {
-          if (!row) {
-            return
-          }
-          
+        piece.shape.forEach((row, y) => {          
           row.forEach((cell, x) => {
             if (cell > 0) {
               const boardY = curY + y
@@ -232,10 +224,6 @@ export default {
         .map(() => Array(NEXT_PIECE_SIZE).fill(0))
 
       this.nextPiece.shape.forEach((row, y) => {
-        if (!row) {
-          return
-        }
-        
         row.forEach((cell, x) => {
           if (cell > 0) {
             result[y][x] = this.nextPiece.colorId
@@ -378,9 +366,6 @@ export default {
       }
 
       piece.shape.forEach((row, y) => {
-        if (!row) {
-          return
-        }
         row.forEach((cell, x) => {
           if (cell === 0) {
             return
